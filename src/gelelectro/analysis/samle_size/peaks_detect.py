@@ -10,12 +10,12 @@ def show_image():
     plt.axis('off')
     plt.show()
 
-def get_signals_list(ing_height, ing_width):
+def get_signals_list(img, img_width):
     signals = []
     lowest_signal = 255
 
     for pixel_line in range(img_width):
-        signal_line = grayscale_img[:,pixel_line]
+        signal_line = img[:,pixel_line]
         signals.append(signal_line)
         
         if min(signal_line) < lowest_signal: # to fix: mby already in preprocessing
@@ -75,7 +75,47 @@ def get_peak_specifs(signal_simplified, length_threshold):
     return peak_specifs
 
 
+def get_lane_and_ladder_specifs(width_threshold, min_ladder_bands, all_peak_specifs):
+    all_lane_specifs = {}
+    ladder_specifs = {}
+    ladder_start = False
+    start = False
+    width = 0
+
+    for pixel_line, peak_specifs in enumerate(all_peak_specifs):
+        if len(all_peak_specifs[peak_specifs]["centers"]) > 0 and not (start or ladder_start):
+            if len(all_peak_specifs[peak_specifs]["centers"]) > min_ladder_bands:
+                ladder_start = True
+            lane_specifs = {}
+            start = pixel_line
+            width = 1
                 
+            
+        elif len(all_peak_specifs[peak_specifs]["centers"]) and start:
+            if len(all_peak_specifs[peak_specifs]["centers"]) > min_ladder_bands:
+                ladder_start = True
+            width += 1 
+
+        elif len(all_peak_specifs[peak_specifs]["centers"]) == 0 and (start or pixel_line == len(all_lane_specifs)-1):
+            if width > width_threshold:
+                lane_specifs["start"] = start
+                lane_specifs["center"] = (start + width/2)
+                lane_specifs["end"] = pixel_line
+                if ladder_start:
+                    ladder_specifs[len(all_lane_specifs)] = lane_specifs
+                else:
+                    all_lane_specifs[len(all_lane_specifs)] = lane_specifs
+            width = 0
+            start = False
+            ladder_start = False
+
+    return all_lane_specifs, ladder_specifs
+
+def get_max_signal_distance_of_lane(lane):
+    center_pixel_line = int(lane_specifs[lane]["center"])
+    center_signal = np.array(signals[center_pixel_line])
+    distance = np.argmax(center_signal)
+    return distance
 
 ################# MAIN CODE
 
@@ -84,12 +124,24 @@ image = sys.argv[1]
 grayscale_img = cv2.imread(image, cv2.IMREAD_GRAYSCALE) # to fix: move to img preprocessing
 img_height, img_width = grayscale_img.shape
 
-signals = get_signals_list(img_height, img_width)
+signals = get_signals_list(grayscale_img, img_width)
 
-signal_simplified = get_simplified_pixel_line_signal(signals, 200, 17)
+all_peak_specifs = {}
+for index, signal in enumerate(signals):
+    signal_simplified = get_simplified_pixel_line_signal(signals, index, 17)
+    all_peak_specifs[index] = get_peak_specifs(signal_simplified, 10)
 
-print(get_peak_specifs(signal_simplified, 10))
+max_peaks_in_line = max([len(all_peak_specifs[i]["centers"]) for i in range(len(all_peak_specifs))])
 
-plot_signal_in_pixel_line(200)
+lane_specifs, ladder_specifs = get_lane_and_ladder_specifs(width_threshold = 7, min_ladder_bands = 4, all_peak_specifs = all_peak_specifs)
+
+# estimate the size of each sample
+for lane in lane_specifs:
+    #print(get_max_signal_distance_of_lane(lane)) # mby compute avg of the lane
+    print(lane_specifs[lane]["center"])
+
+
+
+
+
 show_image()
-
