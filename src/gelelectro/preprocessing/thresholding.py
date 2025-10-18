@@ -1,49 +1,88 @@
 import numpy as np
-from skimage import io
-from skimage.filters import threshold_local
+from skimage import io, filters, exposure, morphology
+from skimage.util import img_as_ubyte
 import matplotlib.pyplot as plt
 
-def simple_threshold_light_bands(image, block_size=51, offset=0.01):
+def threshold_mask(img, percentile):
+    thresh = np.percentile(img, percentile)
+    mask = img > thresh
+    return mask
+
+def isolate_bright_bands(image, percentile=90):
     """
-    Lokálny thresholding pre svetlé pásy na tmavom pozadí.
-    block_size určuje veľkosť okna pre lokálny prah,
-    offset ho mierne posúva (kladný = menej citlivé).
+    Zachová len najjasnejšie (biele) časti obrázka.
+    percentile určuje, aké percento najjasnejších pixelov zostane (napr. 90 = top 10 %).
     """
-    local_thresh = threshold_local(image, block_size=block_size, offset=offset)
-    binary = image > local_thresh
-    return binary
+    # 1️⃣ normalizácia na 0–1
+    img_norm = exposure.rescale_intensity(image, in_range="image", out_range=(0, 1))
 
-def visualize_thresholding(image_path, block_size=51, offset=0.01):
-    # 1️⃣ načítanie obrázka
-    img = io.imread(image_path, as_gray=True)
-    
-    # 2️⃣ výpočet binárnej masky
-    binary = simple_threshold_light_bands(img, block_size=block_size, offset=offset)
+    # 2️⃣ nájdenie prahu podľa percentilu jasu
+    thresh = np.percentile(img_norm, percentile)
 
-    # 3️⃣ vytvorenie overlay (iba pásy)
-    overlay = np.where(binary, img, 0)
+    # 3️⃣ všetko tmavšie než threshold (teda sivé + čierne) ide preč
+    mask = img_norm > thresh
 
-    # 4️⃣ zobrazenie
-    fig, axes = plt.subplots(1, 3, figsize=(14, 5))
-    titles = ["Pôvodný obrázok", "Threshold maska", "Maska na obrázku"]
-    images = [img, binary, overlay]
+    return mask, img_norm
 
-    for ax, im, title in zip(axes, images, titles):
-        ax.imshow(im, cmap="gray")
-        ax.set_title(title)
-        ax.axis("off")
+def clean_mask(mask: np.ndarray, erosion_radius=1, dilation_radius=1):
+    """
+    Odstráni drobné artefakty z binárnej masky pomocou erózie a dilatácie.
 
-    plt.tight_layout()
-    plt.show()
+    Parameters:
+        mask (np.ndarray): Binárna maska (True/False alebo 0/1)
+        erosion_radius (int): Polomer štruktúrneho elementu pre eróziu
+        dilation_radius (int): Polomer štruktúrneho elementu pre dilatáciu
+
+    Returns:
+        np.ndarray: Upravená binárna maska
+    """
+    # Štruktúrny element pre eróziu
+    selem_ero = morphology.disk(erosion_radius)
+    mask_eroded = morphology.erosion(mask, selem_ero)
+
+    # Štruktúrny element pre dilatáciu
+    selem_dil = morphology.disk(dilation_radius)
+    mask_cleaned = morphology.dilation(mask_eroded, selem_dil)
+
+    return mask_cleaned
+
+def threshold(image: np.ndarray, high_perc=95, low_perc=70, erosion_radius=1, dilation_radius=1):
+    """
+    Dvojstupňové thresholdovanie:
+    1. Zachová len najjasnejšie časti obrázka podľa high_perc.
+    2. Vyčistí masku pomocou erózie a dilatácie.
+    3. Aplikácia druhej masky podľa low_perc na pôvodný obrázok.
+
+    Parameters:
+        image (np.ndarray): Vstupný obrázok
+        high_perc (float): Percentil pre prvé thresholdovanie
+        low_perc (float): Percentil pre druhé thresholdovanie
+        erosion_radius (int): Polomer pre eróziu
+        dilation_radius (int): Polomer pre dilatáciu
+
+    Returns:
+        np.ndarray: Výsledný obrázok po dvojstupňovom thresholdovaní
+    """
+    # 1️⃣ Izolácia najjasnejších pásov
+    bright_mask, img_norm = isolate_bright_bands(image, percentile=high_perc)
+
+    # 2️⃣ Čistenie masky
+    clean_bright_mask = clean_mask(bright_mask, erosion_radius, dilation_radius)
+
+    # 3️⃣ Druhé thresholdovanie na pôvodný obrázok
+    final_mask = threshold_mask(img_norm, percentile=low_perc)
+
+    # Kombinácia masiek
+    combined_mask = clean_bright_mask & final_mask
+
+    # Aplikácia masky na pôvodný obrázok
+    result = image * combined_mask
+
+    return result
+
 
 
 if __name__ == "__main__":
-    # 👇 zmeň na svoj testovací obrázok
-    test_image_path = "data/test_samples/sample02_processed.jpg"
-
-    visualize_thresholding(
-        test_image_path,
-        block_size=51,   # môžeš skúsiť 31, 51, 101…
-        offset=0.0001      # menšie = citlivejšie, väčšie = menej
-    )
-
+    test_image_path = "data/test_samples/sample03_processed.jpg"
+    processed_img = threshold(io.imread(test_image_path, as_gray=True))
+    io.imsave("data/processed/sample03_thresholded.jpg", img_as_ubyte(processed_img))
