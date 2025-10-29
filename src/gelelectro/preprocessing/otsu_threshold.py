@@ -39,7 +39,7 @@ def otsu_threshold(image_path):
 
 if __name__ == "__main__":
     # 👇 zmeň na svoj testovací obrázok
-    test_image_path = "data/test_samples/sample03_processed.jpg"
+    test_image_path = "data/test_samples/sample8_edit.png"
     processed_img, _ = otsu_like_threshold(io.imread(test_image_path, as_gray=True))
-
-    io.imsave("data/processed/sample03_otsu_thresh.jpg", img_as_ubyte(processed_img))
+    
+    io.imsave("data/processed/sample7_otsu_thresh.jpg", img_as_ubyte(processed_img))
