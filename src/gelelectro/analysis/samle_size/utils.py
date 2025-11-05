@@ -21,9 +21,6 @@ def get_signals_list(img, img_width):
         
         if min(signal_line) < lowest_signal: # to fix: mby already in preprocessing
             lowest_signal = min(signal_line)
-
-    if lowest_signal != 0:
-        print("normalize the intensity scale")
     
     return signals
 
@@ -50,12 +47,10 @@ def get_lane_and_ladder_specifs(width_threshold, min_ladder_bands, all_peak_cent
     start = False
     width = 0
 
-    for pixel_line, peak_center in enumerate(all_peak_centers): # to fix: no need to enumerate
+    for pixel_line in all_peak_centers:
         num_of_peaks = len(all_peak_centers[pixel_line])
-        #print(num_of_peaks)
 
         if num_of_peaks > 0 and not start:
-            #print("start")
             lane_specifs = {}
             start = pixel_line
             width = 1
@@ -64,9 +59,7 @@ def get_lane_and_ladder_specifs(width_threshold, min_ladder_bands, all_peak_cent
             width += 1 
 
         elif num_of_peaks == 0 and (start or pixel_line == len(all_lane_specifs)-1):
-            #print("end")
             if width > width_threshold:
-                #print("width satisfied")
                 lane_specifs["start"] = start
                 lane_specifs["center"] = (start + width/2)
                 lane_specifs["end"] = pixel_line

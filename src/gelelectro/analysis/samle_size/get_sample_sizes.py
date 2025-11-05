@@ -20,6 +20,7 @@ all_peak_centers = {}
 for index, signal in enumerate(signals):
     all_peak_centers[index] = get_peak_centers(signals, index, 5, 40)
 
+
 max_peaks_in_line = max([len(all_peak_centers[i]) for i in range(len(all_peak_centers))])
 
 all_lane_specifs, ladder_specifs = get_lane_and_ladder_specifs(width_threshold = 25, min_ladder_bands = 3, all_peak_centers = all_peak_centers)
