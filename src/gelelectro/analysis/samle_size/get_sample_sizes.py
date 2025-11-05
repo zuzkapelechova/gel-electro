@@ -14,7 +14,8 @@ grayscale_img = cv2.imread(image, cv2.IMREAD_GRAYSCALE) # to fix: move to img pr
 img_height, img_width = grayscale_img.shape
 
 signals = get_signals_list(grayscale_img, img_width)
-
+print(signals)
+'''
 all_peak_centers = {}
 
 for index, signal in enumerate(signals):
@@ -38,3 +39,4 @@ for lane in all_lane_specifs:
 plot_signal_in_pixel_line(signals, int(ladder_specifs["center"]))
 show_image(grayscale_img)
 plot_sample_size_function(slope, intercept, main_ladder_band_dist, [1517, 1000, 517])
+'''

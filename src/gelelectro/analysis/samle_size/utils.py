@@ -12,16 +12,13 @@ def show_image(img):
     plt.show()
 
 def get_signals_list(img, img_width):
+    # returns list of signals (per pixel line)
     signals = []
-    lowest_signal = 255
 
     for pixel_line in range(img_width):
         signal_line = img[:,pixel_line]
         signals.append(signal_line)
         
-        if min(signal_line) < lowest_signal: # to fix: mby already in preprocessing
-            lowest_signal = min(signal_line)
-    
     return signals
 
 def plot_signal_in_pixel_line(signals, pixel_line):
