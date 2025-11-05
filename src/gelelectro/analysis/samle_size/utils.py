@@ -4,10 +4,10 @@ import numpy as np
 import sys
 from scipy import signal as sig
 
-################ DEFINE FUNCTIONS
-def show_image():
+
+def show_image(img):
     plt.figure()
-    plt.imshow(grayscale_img, cmap = 'gray')
+    plt.imshow(img, cmap = 'gray')
     plt.axis('off')
     plt.show()
 
@@ -27,14 +27,14 @@ def get_signals_list(img, img_width):
     
     return signals
 
-def plot_signal_in_pixel_line(pixel_line):
+def plot_signal_in_pixel_line(signals, pixel_line):
     plt.figure()
     plt.plot(signals[pixel_line])
     plt.title(pixel_line)
     plt.show(block = False)
     plt.ylim(top=255)
 
-def get_peak_centers(pixel_line, width_threshold, intensity_threshold):
+def get_peak_centers(signals, pixel_line, width_threshold, intensity_threshold):
     signal = signals[pixel_line]
     peak_centers = []
     peaks, properties = sig.find_peaks(signal, height=intensity_threshold, width=width_threshold)
@@ -81,13 +81,13 @@ def get_lane_and_ladder_specifs(width_threshold, min_ladder_bands, all_peak_cent
 
     return all_lane_specifs, ladder_specifs
 
-def get_max_signal_distance_of_lane(lane):
+def get_max_signal_distance_of_lane(signals, all_lane_specifs, lane):
     center_pixel_line = int(all_lane_specifs[lane]["center"])
     center_signal = np.array(signals[center_pixel_line])
     distance = np.argmax(center_signal)
     return distance
 
-def get_sample_size_function_variables(ladder_specifs, sizes):
+def get_sample_size_function_variables(signals, ladder_specifs, sizes):
     ladder_center_signal = signals[int(ladder_specifs["center"])]
     distances, properties = sig.find_peaks(ladder_center_signal, height=5, distance = 5, prominence=5)
 
@@ -111,40 +111,3 @@ def get_sample_size_function_variables(ladder_specifs, sizes):
 def estimate_sample_size(slope, intercept, distance):
     predicted_size = 10**(slope * distance + intercept)
     return predicted_size
-    
-################# MAIN CODE
-
-# read the preprocessed image
-image = sys.argv[1]
-png_image = cv2.imread(image, cv2.IMREAD_UNCHANGED)
-cv2.imwrite('image.jpg', png_image) # to do: dlt this line
-image = 'image.jpg'
-grayscale_img = cv2.imread(image, cv2.IMREAD_GRAYSCALE) # to fix: move to img preprocessing
-img_height, img_width = grayscale_img.shape
-
-signals = get_signals_list(grayscale_img, img_width)
-
-all_peak_centers = {}
-
-for index, signal in enumerate(signals):
-    all_peak_centers[index] = get_peak_centers(index, 5, 40)
-
-max_peaks_in_line = max([len(all_peak_centers[i]) for i in range(len(all_peak_centers))])
-
-all_lane_specifs, ladder_specifs = get_lane_and_ladder_specifs(width_threshold = 25, min_ladder_bands = 3, all_peak_centers = all_peak_centers)
-
-
-# get variables of the distance->size function
-slope, intercept, main_ladder_band_dist = get_sample_size_function_variables(ladder_specifs, [1517, 1000, 517])
-
-#estimate the size of each sample
-for lane in all_lane_specifs:
-    sample_distance = get_max_signal_distance_of_lane(lane) # to fix: mby compute avg of the lane
-    sample_size = estimate_sample_size(slope, intercept, sample_distance)
-    print(sample_size)
-
-plot_signal_in_pixel_line(int(ladder_specifs["center"]))
-
-print(main_ladder_band_dist)
-
-show_image()
