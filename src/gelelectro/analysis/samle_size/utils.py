@@ -110,8 +110,8 @@ def get_sample_size_function_variables(signals, ladder_specifs, sizes):
 
     return slope, intercept, top_peak_distances
 
-def plot_sample_size_function(slope, intercept, top_peak_distances):
-    print("bob")
+def plot_sample_size_function(slope, intercept, top_peak_distances, sizes):
+    
     x = np.linspace(min(top_peak_distances), max(top_peak_distances), 100)
 
     # Compute corresponding y-values using the linear function
@@ -121,9 +121,9 @@ def plot_sample_size_function(slope, intercept, top_peak_distances):
     plt.figure()
     plt.scatter(top_peak_distances, np.log10(sizes))
     plt.plot(x, y, color='red')
-    plt.xlabel('Distance')
-    plt.ylabel('log10(Size)')
-    plt.title('Computed Function')
+    plt.xlabel('Distance [px]')
+    plt.ylabel('log10(size)')
+    plt.title('Distance - size')
     plt.show()
 
 def estimate_sample_size(slope, intercept, distance):

@@ -35,7 +35,5 @@ for lane in all_lane_specifs:
     print(sample_size)
 
 plot_signal_in_pixel_line(signals, int(ladder_specifs["center"]))
-
-print(main_ladder_band_dist)
-
 show_image(grayscale_img)
+plot_sample_size_function(slope, intercept, main_ladder_band_dist, [1517, 1000, 517])
