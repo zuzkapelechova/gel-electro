@@ -98,8 +98,10 @@ def get_sample_size_function_variables(signals, ladder_specifs, sizes):
 
         # Select the highest 3 peaks
         top_peak_distances = sorted(distances[top_indices])
-    else:
+    elif len(distances) == 3:
         top_peak_distances = sorted(distances)  # If less than 3 peaks, take whatever is found
+    else:
+        raise ValueError("Couldn't find 3 main ladder bends")
 
 
     log_sizes = np.log10(sizes)
@@ -107,6 +109,22 @@ def get_sample_size_function_variables(signals, ladder_specifs, sizes):
     slope, intercept = np.polyfit(top_peak_distances, log_sizes, 1)
 
     return slope, intercept, top_peak_distances
+
+def plot_sample_size_function(slope, intercept, top_peak_distances):
+    print("bob")
+    x = np.linspace(min(top_peak_distances), max(top_peak_distances), 100)
+
+    # Compute corresponding y-values using the linear function
+    y = slope * x + intercept
+
+    # Plot the data points and the fitted line
+    plt.figure()
+    plt.scatter(top_peak_distances, np.log10(sizes))
+    plt.plot(x, y, color='red')
+    plt.xlabel('Distance')
+    plt.ylabel('log10(Size)')
+    plt.title('Computed Function')
+    plt.show()
 
 def estimate_sample_size(slope, intercept, distance):
     predicted_size = 10**(slope * distance + intercept)
