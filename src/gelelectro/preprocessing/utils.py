@@ -3,7 +3,7 @@ from skimage import morphology, exposure
 from skimage.util import img_as_float32
 from skimage.color import rgb2gray
 
-class GelPreprocessor2:
+class GelPreprocessor:
     """Trieda na štandardizáciu gélových obrázkov"""
 
     @staticmethod
