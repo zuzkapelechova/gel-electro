@@ -7,6 +7,8 @@ from utils import *
 
 # use only if there are two ladders (one on each side)
 
+# bude fungovat jenom jestli jsou nejvyraznejsi bendy kazdeho ladderu stejne velikosti!!
+
 # read the preprocessed image
 image = sys.argv[1]
 png_image = cv2.imread(image, cv2.IMREAD_UNCHANGED)
@@ -34,18 +36,24 @@ point2_x = all_lane_specifs[max(all_lane_specifs.keys())]["center"]
 point1_y = np.argmax(signals[int(point1_x)])
 point2_y = np.argmax(signals[int(point2_x)])
 
-delta_x = point1_x - point2_x
-delta_y = point1_y - point2_y
-angle = np.arctan2(delta_y, delta_x) * 180 / np.pi
+delta_x = point2_x - point1_x
+delta_y = point2_y - point1_y
+angle = np.arctan(delta_y / delta_x) * 180/np.pi
 
-center = [img_height/2, img_width/2]
+mid_point = (int(point1_x + delta_x/2), int(point1_y + delta_y/2))
+print(mid_point)
 
-M = cv2.getRotationMatrix2D(center, angle, 1.0)
-aligned =cv2.warpAffine(grayscale_img, M, [img_width, img_height])
 
-cv2.imshow('aligned', aligned)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+M = cv2.getRotationMatrix2D(center=mid_point, angle=angle, scale=1)
+aligned =cv2.warpAffine(grayscale_img, M, dsize=(img_width, img_height))
+
+
+plt.figure()
+plt.subplot(1,2,1)
+plt.imshow(aligned, cmap='gray')
+plt.subplot(1,2,2)
+plt.imshow(grayscale_img, cmap='gray')
+plt.show()
 
 
 
