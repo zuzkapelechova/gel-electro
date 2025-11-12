@@ -30,10 +30,13 @@ all_lane_specifs, ladder_specifs = get_lane_and_ladder_specifs(width_threshold =
 slope, intercept, main_ladder_band_dist = get_sample_size_function_variables(signals, ladder_specifs, [1517, 1000, 517])
 
 # estimate the size of each sample
-for lane in all_lane_specifs:
-    sample_distance = get_max_signal_distance_of_lane(signals, all_lane_specifs, lane) # to fix: mby compute avg of the lane
-    sample_size = estimate_sample_size(slope, intercept, sample_distance)
-    print(sample_size)
+with open("output.txt", "w") as output:
+    for lane in all_lane_specifs:
+        sample_distance = get_max_signal_distance_of_lane(signals, all_lane_specifs, lane) # to fix: mby compute avg of the lane
+        sample_size = estimate_sample_size(slope, intercept, sample_distance)
+        output.write(str(sample_size))
+        output.write("\n")
 
 show_image(grayscale_img)
 plot_sample_size_function(slope, intercept, main_ladder_band_dist, [1517, 1000, 517])
+
