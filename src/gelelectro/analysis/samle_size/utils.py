@@ -5,11 +5,12 @@ import sys
 from scipy import signal as sig
 
 
-def show_image(img):
+def save_image(img, output):
     plt.figure()
     plt.imshow(img, cmap = 'gray')
     plt.axis('off')
-    plt.show()
+    #plt.show()
+    plt.savefig(output, dpi=300, bbox_inches='tight')
 
 def get_signals_list(img, img_width):
     # returns list of signals (per pixel line)
@@ -100,7 +101,7 @@ def get_sample_size_function_variables(signals, ladder_specifs, sizes):
 
     return slope, intercept, top_peak_distances
 
-def plot_sample_size_function(slope, intercept, top_peak_distances, sizes):
+def save_sample_size_function_plot(slope, intercept, top_peak_distances, sizes, output):
     
     x = np.linspace(min(top_peak_distances), max(top_peak_distances), 100)
 
@@ -113,8 +114,9 @@ def plot_sample_size_function(slope, intercept, top_peak_distances, sizes):
     plt.plot(x, y, color='red')
     plt.xlabel('Distance [px]')
     plt.ylabel('log10(size)')
-    plt.title('Distance - size')
-    plt.show()
+    plt.title('SIZE - DISTANCE')
+    #plt.show()
+    plt.savefig(output)
 
 def estimate_sample_size(slope, intercept, distance):
     predicted_size = 10**(slope * distance + intercept)
