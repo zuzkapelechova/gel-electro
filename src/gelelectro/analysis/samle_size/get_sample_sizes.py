@@ -30,7 +30,7 @@ all_lane_specifs, ladder_specifs = get_lane_and_ladder_specifs(width_threshold =
 slope, intercept, main_ladder_band_dist = get_sample_size_function_variables(signals, ladder_specifs, [1517, 1000, 517])
 
 
-if ladder2:
+if ladder2 == "True":
     all_lane_specifs.popitem()  # rm the 2nd ladder from lanes dictionary
 
 # variable for cv2.putText()
@@ -52,4 +52,5 @@ with open("output.txt", "w") as output:
 
 save_image(grayscale_img, "output.png")
 save_sample_size_function_plot(slope, intercept, main_ladder_band_dist, [1517, 1000, 517], "sample_size_function.png")
+print(ladder2)
 
