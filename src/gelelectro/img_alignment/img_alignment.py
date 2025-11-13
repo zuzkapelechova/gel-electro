@@ -41,19 +41,16 @@ delta_y = point2_y - point1_y
 angle = np.arctan(delta_y / delta_x) * 180/np.pi
 
 mid_point = (int(point1_x + delta_x/2), int(point1_y + delta_y/2))
-print(mid_point)
 
 
 M = cv2.getRotationMatrix2D(center=mid_point, angle=angle, scale=1)
 aligned =cv2.warpAffine(grayscale_img, M, dsize=(img_width, img_height))
 
 
-plt.figure()
-plt.subplot(1,2,1)
-plt.imshow(aligned, cmap='gray')
-plt.subplot(1,2,2)
-plt.imshow(grayscale_img, cmap='gray')
-plt.show()
+save_image(aligned, "output.png")
+
+
+
 
 
 
