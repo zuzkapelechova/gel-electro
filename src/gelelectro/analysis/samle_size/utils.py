@@ -72,11 +72,10 @@ def get_lane_and_ladder_specifs(width_threshold, min_ladder_bands, all_peak_cent
 
     return all_lane_specifs, ladder_specifs
 
-def get_max_signal_distance_of_lane(signals, all_lane_specifs, lane):
+def get_bend_distances_of_lane(signals, all_lane_specifs, lane):
     center_pixel_line = int(all_lane_specifs[lane]["center"])
-    center_signal = np.array(signals[center_pixel_line])
-    distance = np.argmax(center_signal)
-    return distance
+    center_bend_distances = np.array(signals[center_pixel_line])
+    return center_bend_distances
 
 def get_sample_size_function_variables(signals, ladder_specifs, sizes):
     ladder_center_signal = signals[int(ladder_specifs["center"])]
