@@ -45,13 +45,23 @@ def main():
         show_image(processed_img, processed_label)
         messagebox.showinfo("Hotovo", "Obrázok bol spracovaný!")
 
-    # placeholder - analýza veľkosti
+    # analýza veľkosti s ohľadom na počet ladderov
     def analyze_size():
         if processed_img is None:
             messagebox.showwarning("Upozornenie", "Najprv spracuj obrázok!")
             return
-        messagebox.showinfo("Analýza veľkosti",
-                            "Táto funkcia zatiaľ nie je implementovaná.")
+
+        # zistenie počtu ladderov z Radiobutton
+        ladder2_flag = True if ladder_var.get() == 2 else False
+
+        # zavolanie funkcie z utils
+        annotated, results = compute_sample_sizes(processed_img, ladder2=ladder2_flag)
+
+        # zobrazenie výsledného obrázka
+        show_image(annotated, processed_label)
+
+        # zobrazenie textového výstupu
+        messagebox.showinfo("Výsledky analýzy", results)
 
     # placeholder - analýza koncentrácie
     def compute_concentration():
@@ -112,6 +122,15 @@ def main():
 
     export_btn = tk.Button(button_frame, text="📄 Export Report", command=export_report, width=20)
     export_btn.grid(row=2, column=0, padx=10, pady=5)
+
+    # ---- výber počtu ladderov ----
+    ladder_var = tk.IntVar(value=1)  # default = 1 ladder
+    ladder_frame = tk.Frame(button_frame)
+    ladder_frame.grid(row=3, column=0, columnspan=2, pady=10)
+
+    tk.Label(ladder_frame, text="Ladders:").pack(side=tk.LEFT, padx=5)
+    tk.Radiobutton(ladder_frame, text="1 Ladder", variable=ladder_var, value=1).pack(side=tk.LEFT)
+    tk.Radiobutton(ladder_frame, text="2 Ladders", variable=ladder_var, value=2).pack(side=tk.LEFT)
 
     # rám s obrázkami
     image_frame = tk.Frame(root)
