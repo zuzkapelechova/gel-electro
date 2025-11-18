@@ -3,7 +3,7 @@ from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 from skimage import io
 import numpy as np
-from utils import GelPreprocessor
+from utils import GelPreprocessor, compute_sample_sizes
 
 
 def main():
@@ -60,8 +60,18 @@ def main():
         # zobrazenie výsledného obrázka
         show_image(annotated, processed_label)
 
-        # zobrazenie textového výstupu
-        messagebox.showinfo("Výsledky analýzy", results)
+        # scrollovateľné okno pre text
+        result_window = tk.Toplevel(root)
+        result_window.title("Výsledky analýzy")
+
+        text_widget = tk.Text(result_window, wrap=tk.NONE, width=80, height=30)
+        text_widget.insert(tk.END, results)
+        text_widget.config(state=tk.DISABLED)  # aby sa nedal upravovať
+        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        scrollbar = tk.Scrollbar(result_window, command=text_widget.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        text_widget.config(yscrollcommand=scrollbar.set)
 
     # placeholder - analýza koncentrácie
     def compute_concentration():
@@ -123,7 +133,7 @@ def main():
     export_btn = tk.Button(button_frame, text="📄 Export Report", command=export_report, width=20)
     export_btn.grid(row=2, column=0, padx=10, pady=5)
 
-    # ---- výber počtu ladderov ----
+    # výber počtu ladderov
     ladder_var = tk.IntVar(value=1)  # default = 1 ladder
     ladder_frame = tk.Frame(button_frame)
     ladder_frame.grid(row=3, column=0, columnspan=2, pady=10)
