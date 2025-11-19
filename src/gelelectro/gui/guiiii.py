@@ -150,8 +150,16 @@ def main():
     button_frame = tk.Frame(root)
     button_frame.pack(pady=5)
 
-    info_btn = tk.Button(button_frame, text="ℹ️ Info", command=show_info, width=20)
-    info_btn.grid(row=2, column=1, padx=10, pady=5)
+    info_button = tk.Button(
+        root,
+        text="ⓘ",
+        font=("Arial", 16, "bold"),
+        relief="flat",
+        bd=0,
+        command=show_info,
+        cursor="hand2"
+    )
+    info_button.place(relx=0.98, rely=0.02, anchor="ne")
 
     upload_btn = tk.Button(button_frame, text="📁 Upload Image", command=upload_image, width=20)
     upload_btn.grid(row=0, column=0, padx=10, pady=5)
