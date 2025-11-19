@@ -124,6 +124,21 @@ def main():
         img_tk = ImageTk.PhotoImage(img_pil)
         label_widget.config(image=img_tk)
         label_widget.image = img_tk
+    
+    def show_info():
+        # AI generated text for the infobox - to be customized
+        info_text = (
+            "How to use the Gel Analysis Tool:\n\n"
+            "1. Upload an image of a gel (.jpg, .png, .tif).\n"
+            "2. Click 'Preprocess Image' to prepare it for analysis.\n"
+            "3. After preprocessing, use 'Analyze Size' to detect band sizes.\n"
+            "4. Optionally compute concentration (coming soon).\n"
+            "5. Export a report (coming soon).\n\n"
+            "Tips:\n"
+            "- If preprocessing takes long, wait until the progress bar completes.\n"
+            "- Make sure the ladders selection matches your gel (1 or 2 ladders)."
+        )
+        messagebox.showinfo("About / Help", info_text)
 
     # layout GUI
     title = tk.Label(root,
@@ -134,6 +149,9 @@ def main():
     # buttons frame
     button_frame = tk.Frame(root)
     button_frame.pack(pady=5)
+
+    info_btn = tk.Button(button_frame, text="ℹ️ Info", command=show_info, width=20)
+    info_btn.grid(row=2, column=1, padx=10, pady=5)
 
     upload_btn = tk.Button(button_frame, text="📁 Upload Image", command=upload_image, width=20)
     upload_btn.grid(row=0, column=0, padx=10, pady=5)
