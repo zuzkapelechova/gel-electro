@@ -41,8 +41,25 @@ def main():
         if original_img is None:
             messagebox.showwarning("Warning", "Please upload an image first!")
             return
-        processed_img = preprocessor.process_image(original_img)
+        
+        processed_img, results = preprocessor.process_image(original_img)
+
+        # show processed image
         show_image(processed_img, processed_label)
+
+        # scrollable window with results
+        result_window = tk.Toplevel(root)
+        result_window.title("Preprocessing Results")
+
+        text_widget = tk.Text(result_window, wrap=tk.NONE, width=80, height=30)
+        text_widget.insert(tk.END, results)
+        text_widget.config(state=tk.DISABLED)
+        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        scrollbar = tk.Scrollbar(result_window, command=text_widget.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        text_widget.config(yscrollcommand=scrollbar.set)
+
         messagebox.showinfo("Done", "Image has been processed!")
 
     # analyze band sizes

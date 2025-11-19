@@ -8,46 +8,66 @@ from scipy import signal as sig
 
 class GelPreprocessor:
     """ Trieda na standardizaciu obrazkov """
-
     # preklapa obrazky aby boli vsetky biele na ciernom
     @staticmethod
     def detect_and_invert(img, low_perc=5, high_perc=95):
         img = img_as_float(img)
         p_low, p_high = np.percentile(img, [low_perc, high_perc])
 
-        # inverted = False (mozeme neskor pouzit na metadata)
+        inverted = False
         if p_high > 0.5:
             img = 1 - img
-            # inverted = True
-        return img
+            inverted = True
+
+        params = {
+            "detect_and_invert.low_percentile": low_perc,
+            "detect_and_invert.high_percentile": high_perc,
+            "detect_and_invert.p_low": float(p_low),
+            "detect_and_invert.p_high": float(p_high),
+            "detect_and_invert.inverted": inverted,
+        }
+
+        return img, params
 
     # rolling ball metoda (IOCBIO): adaptivne odstranovanie pozadia
     @staticmethod
     def adaptive_bg_subtraction(image: np.ndarray):
-        # base stats
-        mean_intensity = np.mean(image)
-        std_intensity = np.std(image)
+        mean_intensity = float(np.mean(image))
+        std_intensity = float(np.std(image))
         contrast = std_intensity / (mean_intensity + 1e-5)
 
-        # radius
         radius = int(np.clip(200 * np.exp(-4 * contrast), 20, 180))
 
         selem = morphology.disk(radius)
         background = morphology.opening(image, selem)
-
-        # plati pre tmave pozadie svetle pasy
         image_sub = image - background
 
-        # normalizacia intenzity
         image_sub = exposure.rescale_intensity(image_sub, in_range="image", out_range=(0, 1))
 
-        return image_sub
+        params = {
+            "adaptive_bg_subtraction.mean_intensity": mean_intensity,
+            "adaptive_bg_subtraction.std_intensity": std_intensity,
+            "adaptive_bg_subtraction.contrast": float(contrast),
+            "adaptive_bg_subtraction.radius": radius,
+        }
 
-    # tuto funkciu pouzivame
+        return image_sub, params
+
+    # main function
     def process_image(self, img: np.ndarray):
-        img_inverted = self.detect_and_invert(img)
-        img_processed = self.adaptive_bg_subtraction(img_inverted)
-        return img_processed
+        all_params = {}
+
+        img_inverted, p1 = self.detect_and_invert(img)
+        all_params.update(p1)
+
+        img_processed, p2 = self.adaptive_bg_subtraction(img_inverted)
+        all_params.update(p2)
+
+        return img_processed, self.format_params(all_params)
+    
+    def format_params(self, params: dict) -> str:
+        return "\n".join(f"{k}: {v}" for k, v in params.items())
+        return image_sub
 
 
 def save_image(img, output):
