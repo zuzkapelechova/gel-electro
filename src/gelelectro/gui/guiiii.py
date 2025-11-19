@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageTk
 from skimage import io
 import numpy as np
@@ -42,7 +42,12 @@ def main():
             messagebox.showwarning("Warning", "Please upload an image first!")
             return
         
+        progress.start()   # <-- start progress bar
+        root.update_idletasks()
+
         processed_img, results = preprocessor.process_image(original_img)
+
+        progress.stop()    # <-- stop progress bar
 
         # show processed image
         show_image(processed_img, processed_label)
@@ -68,11 +73,16 @@ def main():
             messagebox.showwarning("Warning", "Please preprocess the image first!")
             return
 
+        progress.start()
+        root.update_idletasks()
+
         # get number of ladders from Radiobutton
         ladder2_flag = True if ladder_var.get() == 2 else False
 
         # call function from utils
         annotated, results = compute_sample_sizes(processed_img, ladder2=ladder2_flag)
+
+        progress.stop()
 
         # show results on the image
         show_image(annotated, processed_label)
@@ -149,6 +159,9 @@ def main():
     # buttons frame
     button_frame = tk.Frame(root)
     button_frame.pack(pady=5)
+
+    progress = ttk.Progressbar(root, mode="indeterminate", length=400)
+    progress.pack(pady=10)
 
     info_button = tk.Button(
         root,
