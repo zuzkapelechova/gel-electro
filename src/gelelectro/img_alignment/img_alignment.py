@@ -11,6 +11,7 @@ from utils import *
 
 # read the preprocessed image
 image = sys.argv[1]
+output = sys.argv[2]
 png_image = cv2.imread(image, cv2.IMREAD_UNCHANGED)
 cv2.imwrite('image.jpg', png_image) # to do: dlt this line, move to img preprocessing
 image = 'image.jpg'
@@ -47,7 +48,7 @@ M = cv2.getRotationMatrix2D(center=mid_point, angle=angle, scale=1)
 aligned =cv2.warpAffine(grayscale_img, M, dsize=(img_width, img_height))
 
 
-save_image(aligned, "output.png")
+save_image(aligned, output)
 
 
 
