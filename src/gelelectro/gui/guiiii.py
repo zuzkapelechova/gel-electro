@@ -134,9 +134,14 @@ def main():
             "3. After preprocessing, use 'Analyze Size' to detect band sizes.\n"
             "4. Optionally compute concentration (coming soon).\n"
             "5. Export a report (coming soon).\n\n"
+            "Conditions:\n"
+            "1. Ladder Position: The ladder must be the first lane from the left.\n"
+            "2. Horizontal Alignment: The image must be as horizontally aligned as possible.\n"
+            "3. Dual Ladder Option: If both ladders are positioned on opposite sides, enable the 'Second Ladder' option for automatic alignment.\n"
+            "4. Crop Image Correctly: The top edge of the image should be cropped precisely at the sample wells, where the lanes begin.\n"
+            "5. Single Gel Limitation: The image should contain a maximum of one gel.\n\n"
             "Tips:\n"
             "- If preprocessing takes long, wait until the progress bar completes.\n"
-            "- Make sure the ladders selection matches your gel (1 or 2 ladders)."
         )
         messagebox.showinfo("About / Help", info_text)
 
