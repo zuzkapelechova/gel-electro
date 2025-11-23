@@ -141,9 +141,9 @@ def mk_weight_fnc(ladder_specifs, all_peak_centers, signals, weights):
         raise ValueError("Couldn't find 3 main ladder bands")   # doubled - mk fnc()
 
     intensities = get_intensities(ladder_specifs, all_peak_centers, signals, int(ladder_specifs["center"]), top_peak_distances)
-    print(intensities)
+    print(intensities, top_peak_distances)
     
-    values = [intensities[124], intensities[152], intensities[188]]
+    values = [intensities[top_peak_distances[0]], intensities[top_peak_distances[1]], intensities[top_peak_distances[2]]]
 
     plt.scatter(values, weights)
     plt.show()
