@@ -73,7 +73,8 @@ def get_lane_and_ladder_specifs(width_threshold, min_ladder_bands, all_peak_cent
 
     return all_lane_specifs, ladder_specifs
     
-def get_peak_edges(all_lane_specifs, signals, all_peak_centers, pixel_line, intens_threshold, ladder_peak_centers = None):
+def get_peak_edges(signals, all_peak_centers, pixel_line, abs_intens_threshold, ladder_peak_centers = None):
+
     signal = signals[pixel_line]
 
     if ladder_peak_centers is not None:
@@ -84,7 +85,8 @@ def get_peak_edges(all_lane_specifs, signals, all_peak_centers, pixel_line, inte
     starts = {}
     ends = {}
     
-    for peak_center in peak_centers:
+    for i, peak_center in enumerate(peak_centers):
+        
         top_intens = signal[peak_center]
         start_pixel = end_pixel = peak_center
         end_found = False
@@ -92,12 +94,44 @@ def get_peak_edges(all_lane_specifs, signals, all_peak_centers, pixel_line, inte
         while not start_found or not end_found:
             end_pixel += 1
             start_pixel -= 1
-            if signal[end_pixel] <= intens_threshold and not end_found:
-                ends[peak_center] = end_pixel
-                end_found = True
-            if signal[start_pixel] <= intens_threshold and not start_found:
-                starts[peak_center] = start_pixel
-                start_found = True
+            
+            
+            if len(starts) == 0:    # first bend
+
+                loc_intens_threshold_end = min(signal[pixel] for pixel in range(peak_centers[i], peak_centers[i+1])) + 1
+
+                if signal[end_pixel] <= loc_intens_threshold_end and not end_found:
+                    ends[peak_center] = end_pixel
+                    end_found = True
+                if signal[start_pixel] <= loc_intens_threshold_end and not start_found: # mby abs thrshld
+                    starts[peak_center] = start_pixel
+                    start_found = True
+            
+            elif len(starts) < (len(peak_centers) - 1):    # middle bands
+
+
+                loc_intens_threshold_start = min(signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])) + 1
+                loc_intens_threshold_end = min(signal[pixel] for pixel in range(peak_centers[i], peak_centers[i+1])) + 1
+                max_threshold = max(loc_intens_threshold_start, loc_intens_threshold_end)
+
+                if signal[end_pixel] <= max_threshold and not end_found:    # mby change to loc thrshld
+                    ends[peak_center] = end_pixel
+                    end_found = True
+                if signal[start_pixel] <= max_threshold and not start_found:    # mby change to loc thrshld
+                    starts[peak_center] = start_pixel
+                    start_found = True
+                    print("HERE")
+
+            else:   # last band
+
+                loc_intens_threshold_start = min(signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])) + 1
+
+                if signal[end_pixel] <= loc_intens_threshold_start and not end_found:   # mby change to abs thrshld
+                    ends[peak_center] = end_pixel
+                    end_found = True
+                if signal[start_pixel] <=  loc_intens_threshold_start and not start_found:
+                    starts[peak_center] = start_pixel
+                    start_found = True
     return starts, ends
 
 
@@ -111,23 +145,25 @@ def get_avg_intens(all_lane_specifs, lane, signals, all_peak_centers):
         for peak_center in starts.keys():
             sum[peak_center]
 '''
-def get_intensities(lanes_or_ladder_specifs, all_peak_centers, signals, pixel_line, ladder_peak_centers = None):
+def get_intensities(all_peak_centers, signals, pixel_line, ladder_peak_centers = None):
     if ladder_peak_centers is not None:
-        starts, ends = get_peak_edges(lanes_or_ladder_specifs, signals, all_peak_centers, pixel_line, 5, ladder_peak_centers)
+        starts, ends = get_peak_edges(signals, all_peak_centers, pixel_line, 10, ladder_peak_centers)
+        print(starts, ends)
     else:
-        starts, ends = get_peak_edges(lanes_or_ladder_specifs, signals, all_peak_centers, pixel_line, 5)
+        starts, ends = get_peak_edges(signals, all_peak_centers, pixel_line, 10)
     intensities = {}
     for peak_center in starts.keys():
         signal = signals[pixel_line]
         intensity = sum(int(signal[pixel]) for pixel in range(starts[peak_center], ends[peak_center]))
-        intensities[peak_center] = intensity
+        intensities[peak_center] = int(intensity)
     return intensities
 
 def mk_weight_fnc(ladder_specifs, all_peak_centers, signals, weights):
 
     ladder_center_signal = signals[int(ladder_specifs["center"])]
     distances, properties = sig.find_peaks(ladder_center_signal, height=5, distance = 5, prominence=5)
-        
+
+
     if len(distances) > 3:  # doubled - mk fnc()
     # Get heights of detected peaks # doubled - mk fnc()
         peak_heights = properties['peak_heights']   # doubled - mk fnc()
@@ -140,8 +176,7 @@ def mk_weight_fnc(ladder_specifs, all_peak_centers, signals, weights):
     else:   # doubled - mk fnc()
         raise ValueError("Couldn't find 3 main ladder bands")   # doubled - mk fnc()
 
-    intensities = get_intensities(ladder_specifs, all_peak_centers, signals, int(ladder_specifs["center"]), top_peak_distances)
-    print(intensities, top_peak_distances)
+    intensities = get_intensities(all_peak_centers, signals, int(ladder_specifs["center"]), top_peak_distances)
     
     values = [intensities[top_peak_distances[0]], intensities[top_peak_distances[1]], intensities[top_peak_distances[2]]]
 
