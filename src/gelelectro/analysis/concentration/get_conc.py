@@ -65,4 +65,4 @@ save_sample_size_function_plot(slope, intercept, main_ladder_band_dist, [1517, 1
 #get_peak_edges(all_lane_specifs, signals, all_peak_centers, 1713, intens_threshold=5)
 #get_intensities(all_lane_specifs, all_peak_centers, signals, 1713)
 mk_weight_fnc(ladder_specifs, all_peak_centers, signals, [45, 95, 97])
-plot_signal_in_pixel_line(signals, int(ladder_specifs["center"]))
+#plot_signal_in_pixel_line(signals, int(ladder_specifs["center"]))

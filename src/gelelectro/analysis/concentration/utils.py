@@ -85,128 +85,131 @@ def get_peak_edges(signals, all_peak_centers, pixel_line, abs_intens_threshold, 
     starts = {}
     ends = {}
     
-    for i, peak_center in enumerate(peak_centers):
+    for i, peak_center in enumerate(peak_centers):            
+            
+        if len(starts) == 0:    # first bend
+
+            start_to_peak_signal = [signal[pixel] for pixel in range(0, peak_centers[i])]
+            secondary_peak_centers_start, secondary_peak_properties_start = sig.find_peaks(start_to_peak_signal, height = 5)
+            peak_to_peak_signal_end = [signal[pixel] for pixel in range(peak_centers[i], peak_centers[i+1])]
+            secondary_peak_centers_end, secondary_peak_properties_end = sig.find_peaks(peak_to_peak_signal_end, height = 5)
+            
+            inv_start_to_peak_signal = [255 - signal[pixel] for pixel in range(0, peak_centers[i])]
+            inv_secondary_peak_centers_start, inv_secondary_peak_properties_start = sig.find_peaks(inv_start_to_peak_signal, height = 5)
+            inv_peak_to_peak_signal_end = [255 - signal[pixel] for pixel in range(peak_centers[i], peak_centers[i+1])]
+            inv_secondary_peak_centers_end, inv_secondary_peak_properties_end = sig.find_peaks(inv_peak_to_peak_signal_end, height = 5)
+
+            # start edge
+            if len(secondary_peak_centers_start) >= 1:
+                print("IF", secondary_peak_centers_start)
+                peak_to_sec_peak_dist_start = len(start_to_peak_signal) - max(secondary_peak_centers_start)
+            else:
+                print("ELSE", secondary_peak_centers_start)
+                peak_to_sec_peak_dist_start = 99999999999999
+
+            if len(inv_secondary_peak_centers_start) >= 1:
+                inv_peak_to_sec_peak_dist_start = len(inv_start_to_peak_signal) - max(inv_secondary_peak_centers_start)
+            else:
+                print("ELSE", secondary_peak_centers_start)
+                inv_peak_to_sec_peak_dist_start = 99999999999999
+
+            print(peak_center, min(peak_to_sec_peak_dist_start, inv_peak_to_sec_peak_dist_start))
+
+            starts[peak_center] = peak_center - min(peak_to_sec_peak_dist_start, inv_peak_to_sec_peak_dist_start)
+
+            # end edge    
+            if len(secondary_peak_centers_end) >= 1:
+                peak_to_sec_peak_dist_end = min(secondary_peak_centers_end)
+            else:
+                peak_to_sec_peak_dist_end = 999999999999999
+
+            if len(inv_secondary_peak_centers_end) >= 1:
+                inv_peak_to_sec_peak_dist_end = min(inv_secondary_peak_centers_end)
+            else:
+                inv_peak_to_sec_peak_dist_end = 999999999999999
+            print("END", peak_center, min(peak_to_sec_peak_dist_end, inv_peak_to_sec_peak_dist_end))
+            ends[peak_center] = peak_center + min(peak_to_sec_peak_dist_end, inv_peak_to_sec_peak_dist_end)
+
         
-        top_intens = signal[peak_center]
-        start_pixel = end_pixel = peak_center
-        end_found = False
-        start_found = False
-        while not start_found or not end_found:
-            end_pixel += 1
-            start_pixel -= 1
+        elif len(starts) < (len(peak_centers) - 1):    # middle bands
+
+            peak_to_peak_signal_start = [signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])]
+            secondary_peak_centers_start, secondary_peak_properties_start = sig.find_peaks(peak_to_peak_signal_start, height = 5)
+            peak_to_peak_signal_end = [signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])]
+            secondary_peak_centers_end, secondary_peak_properties_end = sig.find_peaks(peak_to_peak_signal_end, height = 5)
             
+            inv_peak_to_peak_signal_start = [255 - signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])]
+            inv_secondary_peak_centers_start, inv_secondary_peak_properties_start = sig.find_peaks(inv_peak_to_peak_signal_start, height = 5)
+            inv_peak_to_peak_signal_end = [255 - signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])]
+            inv_secondary_peak_centers_end, inv_secondary_peak_properties_end = sig.find_peaks(inv_peak_to_peak_signal_end, height = 5)
+
+            # start edge
+            if len(secondary_peak_centers_start) >= 1:
+                peak_to_sec_peak_dist_start = len(peak_to_peak_signal_start) - max(secondary_peak_centers_start)
+            else:
+                peak_to_sec_peak_dist_start = 99999999999999
+
+            if len(inv_secondary_peak_centers_start) >= 1:
+                inv_peak_to_sec_peak_dist_start = len(inv_peak_to_peak_signal_start) - max(inv_secondary_peak_centers_start)
+            else:
+                inv_peak_to_sec_peak_dist_start = 99999999999999
+            print(peak_center, min(peak_to_sec_peak_dist_start, inv_peak_to_sec_peak_dist_start))
+            starts[peak_center] = peak_center - min(peak_to_sec_peak_dist_start, inv_peak_to_sec_peak_dist_start)
+
+            # end edge    
+            if len(secondary_peak_centers_end) >= 1:
+                peak_to_sec_peak_dist_end = min(secondary_peak_centers_end)
+            else:
+                peak_to_sec_peak_dist_end = 999999999999999
+
+            if len(inv_secondary_peak_centers_end) >= 1:
+                inv_peak_to_sec_peak_dist_end = min(inv_secondary_peak_centers_end)
+            else:
+                inv_peak_to_sec_peak_dist_end = 999999999999999
+            print("END", peak_center, min(peak_to_sec_peak_dist_end, inv_peak_to_sec_peak_dist_end))
+            ends[peak_center] = peak_center + min(peak_to_sec_peak_dist_end, inv_peak_to_sec_peak_dist_end)
+
+        else:   # last band
+
+            peak_to_peak_signal_start = [signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])]
+            secondary_peak_centers_start, secondary_peak_properties_start = sig.find_peaks(peak_to_peak_signal_start, height = 5)
+            peak_to_end_signal = [signal[pixel] for pixel in range(peak_centers[i], len(signal))]
+            secondary_peak_centers_end, secondary_peak_properties_end = sig.find_peaks(peak_to_end_signal, height = 5)
             
-            if len(starts) == 0:    # first bend
+            inv_peak_to_peak_signal_start = [255 - signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])]
+            inv_secondary_peak_centers_start, inv_secondary_peak_properties_start = sig.find_peaks(inv_peak_to_peak_signal_start, height = 5)
+            inv_peak_to_end_signal = [255 - signal[pixel] for pixel in range(peak_centers[i], len(signal))]
+            inv_secondary_peak_centers_end, inv_secondary_peak_properties_end = sig.find_peaks(inv_peak_to_end_signal, height = 5)
 
-                start_to_peak_signal = [signal[pixel] for pixel in range(0, peak_centers[i])]
-                secondary_peak_centers_start, secondary_peak_properties_start = sig.find_peaks(start_to_peak_signal, height = 5)
-                peak_to_peak_signal_end = [signal[pixel] for pixel in range(peak_centers[i], peak_centers[i+1])]
-                secondary_peak_centers_end, secondary_peak_properties_end = sig.find_peaks(peak_to_peak_signal_end, height = 5)
+            # start edge
+            if len(secondary_peak_centers_start) >= 1:
+                peak_to_sec_peak_dist_start = len(peak_to_peak_signal_start) - max(secondary_peak_centers_start)
+            else:
+                peak_to_sec_peak_dist_start = 99999999999999
 
-                if len(peak_to_peak_signal_end) >= 1 or len(start_to_peak_signal) >= 1:
-                    minimum_dist_end = abs(np.argmin(peak_to_peak_signal_end))
-                    minimum_dist_start = abs(peak_center - np.argmin(start_to_peak_signal))
-                    peak_to_loc_min_dist = min(minimum_dist_end, minimum_dist_start)
-                else:
-                    peak_to_loc_min_dist = 99999999999
-                if len(secondary_peak_centers_start) >= 1:
-                    peak_to_sec_peak_dist_start = max(secondary_peak_centers_start) - peak_center
-                else:
-                    peak_to_sec_peak_dist_start = 99999999999999
-                if len(secondary_peak_centers_end) >= 1:
-                    peak_to_sec_peak_dist_end = min(secondary_peak_centers_end)
-                else:
-                    peak_to_sec_peak_dist_end = 999999999999999
+            if len(inv_secondary_peak_centers_start) >= 1:
+                inv_peak_to_sec_peak_dist_start = len(inv_peak_to_peak_signal_start) - max(inv_secondary_peak_centers_start)
+            else:
+                inv_peak_to_sec_peak_dist_start = 99999999999999
+            print(peak_center, min(peak_to_sec_peak_dist_start, inv_peak_to_sec_peak_dist_start))
+            starts[peak_center] = peak_center - min(peak_to_sec_peak_dist_start, inv_peak_to_sec_peak_dist_start)
 
-                min_abs_ndx = np.argmin([abs(peak_to_loc_min_dist), abs(peak_to_sec_peak_dist_end), abs(peak_to_sec_peak_dist_start)])
-                threshold_value_distance = [peak_to_loc_min_dist, peak_to_sec_peak_dist_end, peak_to_sec_peak_dist_start][min_abs_ndx]
-                threshold = signal[peak_center + threshold_value_distance]
+            # end edge    
+            if len(secondary_peak_centers_end) >= 1:
+                peak_to_sec_peak_dist_end = min(secondary_peak_centers_end)
+            else:
+                peak_to_sec_peak_dist_end = 999999999999999
 
-                if signal[end_pixel] <= threshold and not end_found:
-                    ends[peak_center] = end_pixel
-                    end_found = True
-                if signal[start_pixel] <= threshold and not start_found: # mby abs thrshld
-                    starts[peak_center] = start_pixel
-                    start_found = True
-            
-            elif len(starts) < (len(peak_centers) - 1):    # middle bands
+            if len(inv_secondary_peak_centers_end) >= 1:
+                inv_peak_to_sec_peak_dist_end = min(inv_secondary_peak_centers_end)
+            else:
+                inv_peak_to_sec_peak_dist_end = 999999999999999
+            print("END", peak_center, min(peak_to_sec_peak_dist_end, inv_peak_to_sec_peak_dist_end))
+            ends[peak_center] = peak_center + min(peak_to_sec_peak_dist_end, inv_peak_to_sec_peak_dist_end)
 
-                peak_to_peak_signal_start = [signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])]
-                secondary_peak_centers_start, secondary_peak_properties_start = sig.find_peaks(peak_to_peak_signal_start, height = 5)
-                peak_to_peak_signal_end = [signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])]
-                secondary_peak_centers_end, secondary_peak_properties_end = sig.find_peaks(peak_to_peak_signal_end, height = 5)
 
-                if len(peak_to_peak_signal_end) >= 1 or len(peak_to_peak_signal_start) >= 1:
-                    minimum_dist_end = abs(np.argmin(peak_to_peak_signal_end))
-                    minimum_dist_start = abs(len(peak_to_peak_signal_start) - np.argmin(peak_to_peak_signal_start))
-                    peak_to_loc_min_dist = min(minimum_dist_end, minimum_dist_start)
-                else:
-                    peak_to_loc_min_dist = 99999999999
-                if len(secondary_peak_centers_start) >= 1:
-                    peak_to_sec_peak_dist_start = max(secondary_peak_centers_start) - peak_center
-                else:
-                    peak_to_sec_peak_dist_start = 99999999999999
-                if len(secondary_peak_centers_end) >= 1:
-                    peak_to_sec_peak_dist_end = min(secondary_peak_centers_end)
-                else:
-                    peak_to_sec_peak_dist_end = 999999999999999
-
-                min_abs_ndx = np.argmin([abs(peak_to_loc_min_dist), abs(peak_to_sec_peak_dist_end), abs(peak_to_sec_peak_dist_start)])
-                threshold_value_distance = [peak_to_loc_min_dist, peak_to_sec_peak_dist_end, peak_to_sec_peak_dist_start][min_abs_ndx]
-                threshold = signal[peak_center + threshold_value_distance]
-
-                if signal[end_pixel] <= threshold and not end_found:
-                    ends[peak_center] = end_pixel
-                    end_found = True
-                if signal[start_pixel] <= threshold and not start_found: # mby abs thrshld
-                    starts[peak_center] = start_pixel
-                    start_found = True
-
-            else:   # last band
-
-                peak_to_peak_signal_start = [signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])]
-                secondary_peak_centers_start, secondary_peak_properties_start = sig.find_peaks(peak_to_peak_signal_start, height = 5)
-                peak_to_end_signal = [signal[pixel] for pixel in range(peak_centers[i], len(signal))]
-                secondary_peak_centers_end, secondary_peak_properties_end = sig.find_peaks(peak_to_end_signal, height = 5)
-                
-                if len(peak_to_end_signal) >= 1 or len(peak_to_peak_signal_start) >= 1:
-                    minimum_dist_end = abs(np.argmin(peak_to_peak_signal_end))
-                    minimum_dist_start = abs(len(peak_to_peak_signal_start) - np.argmin(peak_to_peak_signal_start))
-                    peak_to_loc_min_dist = min(minimum_dist_end, minimum_dist_start)
-                else:
-                    peak_to_loc_min_dist = 99999999999
-                if len(secondary_peak_centers_start) >= 1:
-                    peak_to_sec_peak_dist_start = max(secondary_peak_centers_start) - peak_center
-                else:
-                    peak_to_sec_peak_dist_start = 99999999999999
-                if len(secondary_peak_centers_end) >= 1:
-                    peak_to_sec_peak_dist_end = min(secondary_peak_centers_end)
-                else:
-                    peak_to_sec_peak_dist_end = 999999999999999
-
-                min_abs_ndx = np.argmin([abs(peak_to_loc_min_dist), abs(peak_to_sec_peak_dist_end), abs(peak_to_sec_peak_dist_start)])
-                threshold_value_distance = [peak_to_loc_min_dist, peak_to_sec_peak_dist_end, peak_to_sec_peak_dist_start][min_abs_ndx]
-                threshold = signal[peak_center + threshold_value_distance]
-
-                if signal[end_pixel] <= threshold and not end_found:
-                    ends[peak_center] = end_pixel
-                    end_found = True
-                if signal[start_pixel] <= threshold and not start_found: # mby abs thrshld
-                    starts[peak_center] = start_pixel
-                    start_found = True
     return starts, ends
 
-
-'''
-def get_avg_intens(all_lane_specifs, lane, signals, all_peak_centers):
-    for pixel_line in range(all_lane_specifs[lane]["start"], all_lane_specifs[lane]["end"]):
-        
-        starts, ends = get_peak_edges(all_lane_specifs, signals, all_peak_centers, pixel_line, 5)
-        sums = {}
-
-        for peak_center in starts.keys():
-            sum[peak_center]
-'''
 def get_intensities(all_peak_centers, signals, pixel_line, ladder_peak_centers = None):
     if ladder_peak_centers is not None:
         starts, ends = get_peak_edges(signals, all_peak_centers, pixel_line, 10, ladder_peak_centers)
@@ -242,6 +245,11 @@ def mk_weight_fnc(ladder_specifs, all_peak_centers, signals, weights):
     
     values = np.log([intensities[top_peak_distances[0]], intensities[top_peak_distances[1]], intensities[top_peak_distances[2]]])
 
+    a, b = np.polyfit(values, weights, 1)
+    x_line = np.linspace(values[0], values[2])
+    y_line = a * x_line + b
+
+    plt.plot(x_line, y_line, color="red")
     plt.scatter(values, weights)
     plt.show()
 
