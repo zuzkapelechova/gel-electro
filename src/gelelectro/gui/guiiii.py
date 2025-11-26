@@ -3,7 +3,7 @@ from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 from skimage import io
 import numpy as np
-from utils import GelPreprocessor, compute_sample_sizes
+from utils import GelPreprocessor, compute_sample_sizes, align_img
 
 
 def main():
@@ -42,7 +42,13 @@ def main():
             messagebox.showwarning("Warning", "Please upload an image first!")
             return
         
+        # get number of ladders from Radiobutton
+        ladder2_flag = True if ladder_var.get() == 2 else False
+
         processed_img, results = preprocessor.process_image(original_img)
+        if ladder2_flag:
+            aligned = align_img(processed_img)
+            processed_img = aligned
 
         # show processed image
         show_image(processed_img, processed_label)
