@@ -26,9 +26,9 @@ for index, signal in enumerate(signals):
 # find ladder and lanes and save the specifications (start, center, end of each lane)
 all_lane_specifs, ladder_specifs = get_lane_and_ladder_specifs(width_threshold = 25, min_ladder_bands = 3, all_peak_centers = all_peak_centers)
 
-'''
-# get variables of the distance->size function
-slope, intercept, main_ladder_band_dist = get_sample_size_function_variables(signals, ladder_specifs, [1517, 1000, 517])
+
+# get variables of the area->weight function and create the stand. curve
+a, b = mk_weight_fnc(ladder_specifs, all_peak_centers, signals, [45, 95, 97], "output")
 
 
 if ladder2 == "True":
@@ -40,29 +40,35 @@ text_size = cv2.getTextSize("-----", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
 # estimate the size of each sample
 with open("output.txt", "w") as output:
     for lane in all_lane_specifs:
-        sample_distances = all_peak_centers[int(all_lane_specifs[lane]["center"])]
-        sample_sizes = []
+        pixel_line = int(all_lane_specifs[lane]["center"])
+        
+        sample_weights = get_sample_weight(all_peak_centers, signals, pixel_line, a, b)
 
         output.write(f"lane {lane}: \n")
-        for i, sample_distance in enumerate(sample_distances):
-            sample_size = estimate_sample_size(slope, intercept, sample_distance)
-            sample_sizes.append(sample_size)
+        for i, peak_center in enumerate(sample_weights.keys()):
+            sample_weight = sample_weights[peak_center]
 
             #write sizes into output file
-            output.write(f"{str(sample_size)} bp\n")
+            output.write(f"{str(sample_weight)} ng\n")
 
             # add image annotations
             centered_x_position = int(all_lane_specifs[lane]["center"]) - text_size[0] // 2
-            y_position = int(sample_distance)
-            cv2.putText(grayscale_img, f"{int(sample_size)} bp", (centered_x_position, 15 + 15*i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.putText(grayscale_img, "-----", (centered_x_position, sample_distance), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
+            y_position = int(peak_center)
+
+            if isinstance(sample_weight, (int, float)):
+                weight_to_print = round(sample_weight, 1)
+            else:
+                weight_to_print = sample_weight
+
+            cv2.putText(grayscale_img, f"{weight_to_print} ng", (centered_x_position, 15 + 15*i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(grayscale_img, "-----", (centered_x_position, peak_center), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
 
         output.write("--------------\n")
 
 save_image(grayscale_img, "output.png")
-save_sample_size_function_plot(slope, intercept, main_ladder_band_dist, [1517, 1000, 517], "sample_size_function.png")
+#save_sample_size_function_plot(slope, intercept, main_ladder_band_dist, [1517, 1000, 517], "sample_size_function.png")
 '''
 #get_peak_edges(all_lane_specifs, signals, all_peak_centers, 1713, intens_threshold=5)
 #get_intensities(all_lane_specifs, all_peak_centers, signals, 1713)
-mk_weight_fnc(ladder_specifs, all_peak_centers, signals, [45, 95, 97])
 #plot_signal_in_pixel_line(signals, int(ladder_specifs["center"]))
+'''

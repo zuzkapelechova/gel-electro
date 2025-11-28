@@ -86,8 +86,51 @@ def get_peak_edges(signals, all_peak_centers, pixel_line, abs_intens_threshold, 
     ends = {}
     
     for i, peak_center in enumerate(peak_centers):            
+
+        if len(starts) == 0 and len(peak_centers) == 1:    # first and single bend
+
+            start_to_peak_signal = [signal[pixel] for pixel in range(0, peak_centers[i])]
+            secondary_peak_centers_start, secondary_peak_properties_start = sig.find_peaks(start_to_peak_signal, height = 5)
+            peak_to_end_signal = [signal[pixel] for pixel in range(peak_centers[i], len(signal))]
+            secondary_peak_centers_end, secondary_peak_properties_end = sig.find_peaks(peak_to_end_signal, height = 5)
             
-        if len(starts) == 0:    # first bend
+            inv_start_to_peak_signal = [255 - signal[pixel] for pixel in range(0, peak_centers[i])]
+            inv_secondary_peak_centers_start, inv_secondary_peak_properties_start = sig.find_peaks(inv_start_to_peak_signal, height = 5)
+            inv_peak_to_end_signal = [255 - signal[pixel] for pixel in range(peak_centers[i], len(signal))]
+            inv_secondary_peak_centers_end, inv_secondary_peak_properties_end = sig.find_peaks(inv_peak_to_end_signal, height = 5)
+
+            # start edge
+            if len(secondary_peak_centers_start) >= 1:
+                print("IF", secondary_peak_centers_start)
+                peak_to_sec_peak_dist_start = len(start_to_peak_signal) - max(secondary_peak_centers_start)
+            else:
+                print("ELSE", secondary_peak_centers_start)
+                peak_to_sec_peak_dist_start = 99999999999999
+
+            if len(inv_secondary_peak_centers_start) >= 1:
+                inv_peak_to_sec_peak_dist_start = len(inv_start_to_peak_signal) - max(inv_secondary_peak_centers_start)
+            else:
+                print("ELSE", secondary_peak_centers_start)
+                inv_peak_to_sec_peak_dist_start = 99999999999999
+
+            print(peak_center, min(peak_to_sec_peak_dist_start, inv_peak_to_sec_peak_dist_start))
+
+            starts[peak_center] = peak_center - min(peak_to_sec_peak_dist_start, inv_peak_to_sec_peak_dist_start)
+
+            # end edge    
+            if len(secondary_peak_centers_end) >= 1:
+                peak_to_sec_peak_dist_end = min(secondary_peak_centers_end)
+            else:
+                peak_to_sec_peak_dist_end = 999999999999999
+
+            if len(inv_secondary_peak_centers_end) >= 1:
+                inv_peak_to_sec_peak_dist_end = min(inv_secondary_peak_centers_end)
+            else:
+                inv_peak_to_sec_peak_dist_end = 999999999999999
+            print("END", peak_center, min(peak_to_sec_peak_dist_end, inv_peak_to_sec_peak_dist_end))
+            ends[peak_center] = peak_center + min(peak_to_sec_peak_dist_end, inv_peak_to_sec_peak_dist_end)
+
+        elif len(starts) == 0:    # first bend
 
             start_to_peak_signal = [signal[pixel] for pixel in range(0, peak_centers[i])]
             secondary_peak_centers_start, secondary_peak_properties_start = sig.find_peaks(start_to_peak_signal, height = 5)
@@ -213,9 +256,9 @@ def get_peak_edges(signals, all_peak_centers, pixel_line, abs_intens_threshold, 
 def get_intensities(all_peak_centers, signals, pixel_line, ladder_peak_centers = None):
     if ladder_peak_centers is not None:
         starts, ends = get_peak_edges(signals, all_peak_centers, pixel_line, 10, ladder_peak_centers)
-        print(starts, ends)
     else:
         starts, ends = get_peak_edges(signals, all_peak_centers, pixel_line, 10)
+    
     intensities = {}
     for peak_center in starts.keys():
         signal = signals[pixel_line]
@@ -223,7 +266,7 @@ def get_intensities(all_peak_centers, signals, pixel_line, ladder_peak_centers =
         intensities[peak_center] = int(intensity)
     return intensities
 
-def mk_weight_fnc(ladder_specifs, all_peak_centers, signals, weights):
+def mk_weight_fnc(ladder_specifs, all_peak_centers, signals, weights, plot_output):
 
     ladder_center_signal = signals[int(ladder_specifs["center"])]
     distances, properties = sig.find_peaks(ladder_center_signal, height=5, distance = 5, prominence=5)
@@ -243,15 +286,33 @@ def mk_weight_fnc(ladder_specifs, all_peak_centers, signals, weights):
 
     intensities = get_intensities(all_peak_centers, signals, int(ladder_specifs["center"]), top_peak_distances)
     
-    values = np.log([intensities[top_peak_distances[0]], intensities[top_peak_distances[1]], intensities[top_peak_distances[2]]])
+    areas = [intensities[top_peak_distances[0]], intensities[top_peak_distances[1]], intensities[top_peak_distances[2]]]
 
-    a, b = np.polyfit(values, weights, 1)
-    x_line = np.linspace(values[0], values[2])
+    a, b = np.polyfit(areas, weights, 1)
+
+    x_line = np.linspace(areas[0], areas[2])
     y_line = a * x_line + b
 
     plt.plot(x_line, y_line, color="red")
-    plt.scatter(values, weights)
+    plt.scatter(areas, weights)
+    plt.xlabel("area under peak")
+    plt.ylabel("weight [ng]")
+    plt.title("area under peak - weight\nstandard curve")
     plt.show()
+
+    return a, b
+
+def get_sample_weight(all_peak_centers, signals, pixel_line, a, b):
+    intensities = get_intensities(all_peak_centers, signals, pixel_line)
+    weights = {}
+    for peak_center in intensities.keys():
+        weight_estimation = a * intensities[peak_center] + b
+        if weight_estimation < 1:
+            weight = "< 1"
+        else:
+            weight = weight_estimation
+        weights[peak_center] = weight
+    return weights
 
 def get_band_distances_of_lane(signals, all_lane_specifs, lane):
     center_pixel_line = int(all_lane_specifs[lane]["center"])
