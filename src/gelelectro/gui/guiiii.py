@@ -21,8 +21,6 @@ def main():
     original_img = None
     processed_img = None
     preprocess_results_text = None
-    band_results_text = None
-    annotated_img = None
     annotated_size_img = None
     size_results_text = None
     annotated_conc_img = None
