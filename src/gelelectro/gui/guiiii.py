@@ -3,7 +3,7 @@ from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 from skimage import io
 import numpy as np
-from utils import GelPreprocessor, compute_sample_sizes, align_img, generate_report
+from utils import GelPreprocessor, compute_sample_sizes, align_img, generate_report, get_sample_concentrations, get_band_weights
 
 
 def main():
@@ -88,26 +88,36 @@ def main():
         if processed_img is None:
             messagebox.showwarning("Warning", "Please preprocess the image first!")
             return
-        messagebox.showinfo(
-            "Concentration Analysis",
-            "This function is not implemented yet."
-        )
+
+        # get number of ladders from Radiobutton
+        ladder2_flag = True if ladder_var.get() == 2 else False
+
+        # call function from utils
+        annotated, results = get_sample_concentrations(processed_img, 10, volume=sample_volume.get(), ladder2=ladder2_flag)
+        annotated_img = annotated
+        band_results_text = results
+
+        # show results on the image
+        show_image(annotated, processed_label)
+        messagebox.showinfo("Done", "Image has been analysed!")
     # placeholder – band weight estimation
     def estimate_band_weights():
-        """ note FOR THE PERSON WHO WILL IMPLEMENT THIS:
-        - Use sample_volume.get() to obtain the volume entered by user.
-        - The function should produce:
-            1. Annotated image with detected band weights
-            2. Text report (similar to compute_sample_sizes)
-        """
-        
+
         if processed_img is None:
             messagebox.showwarning("Warning", "Please preprocess the image first!")
             return
-        messagebox.showinfo(
-            "Band Weight Estimation",
-            "This function is not implemented yet."
-        )
+
+        # get number of ladders from Radiobutton
+        ladder2_flag = True if ladder_var.get() == 2 else False
+
+        # call function from utils
+        annotated, results = get_band_weights(processed_img, ladder2=ladder2_flag)
+        annotated_img = annotated
+        band_results_text = results
+
+        # show results on the image
+        show_image(annotated, processed_label)
+        messagebox.showinfo("Done", "Image has been analysed!")
 
     # export report
     def export_report():
@@ -219,7 +229,7 @@ def main():
     volume_frame = tk.Frame(button_frame)
     volume_frame.grid(row=2, column=1, pady=10)
 
-    tk.Label(volume_frame, text="Sample volume (µL):").pack(side=tk.LEFT, padx=5)
+    tk.Label(volume_frame, text="Sample volume (µl):").pack(side=tk.LEFT, padx=5)
     volume_entry = tk.Entry(volume_frame, textvariable=sample_volume, width=8)
     volume_entry.pack(side=tk.LEFT)
 

@@ -206,7 +206,7 @@ def compute_sample_sizes(preprocessed_img, ladder2=False):
     # find ladder and lanes and save the specifications (start, center, end of each lane)
     all_lane_specifs, ladder_specifs = get_lane_and_ladder_specifs(width_threshold = 25, min_ladder_bands = 3, all_peak_centers = all_peak_centers)
 
-    if ladder2:
+    if ladder2 and len(all_lane_specifs) > 0:
         all_lane_specifs.popitem()
 
     # get variables of the distance->size function
@@ -249,7 +249,6 @@ def compute_sample_sizes(preprocessed_img, ladder2=False):
 
 
     return color_img, results_text
-    return grayscale_img, results_text
 
 def align_img(preprocessed_img):
 
@@ -287,6 +286,399 @@ def align_img(preprocessed_img):
 
 
     return aligned
+
+def get_peak_edges(signals, all_peak_centers, pixel_line, abs_intens_threshold, ladder_peak_centers = None):
+
+    signal = signals[pixel_line]
+
+    if ladder_peak_centers is not None:
+        peak_centers = ladder_peak_centers
+    else:
+        peak_centers = all_peak_centers[pixel_line]
+
+    starts = {}
+    ends = {}
+    
+    for i, peak_center in enumerate(peak_centers):            
+
+        if len(starts) == 0 and len(peak_centers) == 1:    # first and single bend
+
+            start_to_peak_signal = [signal[pixel] for pixel in range(0, peak_centers[i])]
+            secondary_peak_centers_start, secondary_peak_properties_start = sig.find_peaks(start_to_peak_signal, height = 5)
+            peak_to_end_signal = [signal[pixel] for pixel in range(peak_centers[i], len(signal))]
+            secondary_peak_centers_end, secondary_peak_properties_end = sig.find_peaks(peak_to_end_signal, height = 5)
+            
+            inv_start_to_peak_signal = [255 - signal[pixel] for pixel in range(0, peak_centers[i])]
+            inv_secondary_peak_centers_start, inv_secondary_peak_properties_start = sig.find_peaks(inv_start_to_peak_signal, height = 5)
+            inv_peak_to_end_signal = [255 - signal[pixel] for pixel in range(peak_centers[i], len(signal))]
+            inv_secondary_peak_centers_end, inv_secondary_peak_properties_end = sig.find_peaks(inv_peak_to_end_signal, height = 5)
+
+            # start edge
+            if len(secondary_peak_centers_start) >= 1:
+                peak_to_sec_peak_dist_start = len(start_to_peak_signal) - max(secondary_peak_centers_start)
+            else:
+                peak_to_sec_peak_dist_start = 99999999999999
+
+            if len(inv_secondary_peak_centers_start) >= 1:
+                inv_peak_to_sec_peak_dist_start = len(inv_start_to_peak_signal) - max(inv_secondary_peak_centers_start)
+            else:
+                inv_peak_to_sec_peak_dist_start = 99999999999999
+
+            if peak_to_sec_peak_dist_start > len(signal) and inv_peak_to_sec_peak_dist_start > len(signal):
+                abs_min = np.argmin(start_to_peak_signal)
+            else:
+                abs_min = 9999999999999
+
+            starts[peak_center] = peak_center - min(peak_to_sec_peak_dist_start, inv_peak_to_sec_peak_dist_start, abs_min)
+
+            # end edge    
+            if len(secondary_peak_centers_end) >= 1:
+                peak_to_sec_peak_dist_end = min(secondary_peak_centers_end)
+            else:
+                peak_to_sec_peak_dist_end = 999999999999999
+
+            if len(inv_secondary_peak_centers_end) >= 1:
+                inv_peak_to_sec_peak_dist_end = min(inv_secondary_peak_centers_end)
+            else:
+                inv_peak_to_sec_peak_dist_end = 999999999999999
+
+            if peak_to_sec_peak_dist_end > len(signal) and inv_peak_to_sec_peak_dist_end > len(signal):
+                abs_min = np.argmin(peak_to_end_signal)
+            else:
+                abs_min = 9999999999999
+
+            ends[peak_center] = peak_center + min(peak_to_sec_peak_dist_end, inv_peak_to_sec_peak_dist_end, abs_min)
+
+        elif len(starts) == 0:    # first bend
+
+            start_to_peak_signal = [signal[pixel] for pixel in range(0, peak_centers[i])]
+            secondary_peak_centers_start, secondary_peak_properties_start = sig.find_peaks(start_to_peak_signal, height = 5)
+            peak_to_peak_signal_end = [signal[pixel] for pixel in range(peak_centers[i], peak_centers[i+1])]
+            secondary_peak_centers_end, secondary_peak_properties_end = sig.find_peaks(peak_to_peak_signal_end, height = 5)
+            
+            inv_start_to_peak_signal = [255 - signal[pixel] for pixel in range(0, peak_centers[i])]
+            inv_secondary_peak_centers_start, inv_secondary_peak_properties_start = sig.find_peaks(inv_start_to_peak_signal, height = 5)
+            inv_peak_to_peak_signal_end = [255 - signal[pixel] for pixel in range(peak_centers[i], peak_centers[i+1])]
+            inv_secondary_peak_centers_end, inv_secondary_peak_properties_end = sig.find_peaks(inv_peak_to_peak_signal_end, height = 5)
+
+            # start edge
+            if len(secondary_peak_centers_start) >= 1:
+                peak_to_sec_peak_dist_start = len(start_to_peak_signal) - max(secondary_peak_centers_start)
+            else:
+                peak_to_sec_peak_dist_start = 99999999999999
+
+            if len(inv_secondary_peak_centers_start) >= 1:
+                inv_peak_to_sec_peak_dist_start = len(inv_start_to_peak_signal) - max(inv_secondary_peak_centers_start)
+            else:
+                inv_peak_to_sec_peak_dist_start = 99999999999999
+
+            if peak_to_sec_peak_dist_start > len(signal) and inv_peak_to_sec_peak_dist_start > len(signal):
+                abs_min = np.argmin(start_to_peak_signal)
+            else:
+                abs_min = 9999999999999
+
+            starts[peak_center] = peak_center - min(peak_to_sec_peak_dist_start, inv_peak_to_sec_peak_dist_start ,abs_min)
+
+            # end edge    
+            if len(secondary_peak_centers_end) >= 1:
+                peak_to_sec_peak_dist_end = min(secondary_peak_centers_end)
+            else:
+                peak_to_sec_peak_dist_end = 999999999999999
+
+            if len(inv_secondary_peak_centers_end) >= 1:
+                inv_peak_to_sec_peak_dist_end = min(inv_secondary_peak_centers_end)
+            else:
+                inv_peak_to_sec_peak_dist_end = 999999999999999
+            
+            if peak_to_sec_peak_dist_end > len(signal) and inv_peak_to_sec_peak_dist_end > len(signal):
+                abs_min = np.argmin(peak_to_peak_signal_end)
+            else:
+                abs_min = 9999999999999
+
+            ends[peak_center] = peak_center + min(peak_to_sec_peak_dist_end, inv_peak_to_sec_peak_dist_end, abs_min)
+
+        
+        elif len(starts) < (len(peak_centers) - 1):    # middle bands
+
+            peak_to_peak_signal_start = [signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])]
+            secondary_peak_centers_start, secondary_peak_properties_start = sig.find_peaks(peak_to_peak_signal_start, height = 5)
+            peak_to_peak_signal_end = [signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])]
+            secondary_peak_centers_end, secondary_peak_properties_end = sig.find_peaks(peak_to_peak_signal_end, height = 5)
+            
+            inv_peak_to_peak_signal_start = [255 - signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])]
+            inv_secondary_peak_centers_start, inv_secondary_peak_properties_start = sig.find_peaks(inv_peak_to_peak_signal_start, height = 5)
+            inv_peak_to_peak_signal_end = [255 - signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])]
+            inv_secondary_peak_centers_end, inv_secondary_peak_properties_end = sig.find_peaks(inv_peak_to_peak_signal_end, height = 5)
+
+            # start edge
+            if len(secondary_peak_centers_start) >= 1:
+                peak_to_sec_peak_dist_start = len(peak_to_peak_signal_start) - max(secondary_peak_centers_start)
+            else:
+                peak_to_sec_peak_dist_start = 99999999999999
+
+            if len(inv_secondary_peak_centers_start) >= 1:
+                inv_peak_to_sec_peak_dist_start = len(inv_peak_to_peak_signal_start) - max(inv_secondary_peak_centers_start)
+            else:
+                inv_peak_to_sec_peak_dist_start = 99999999999999
+
+            if peak_to_sec_peak_dist_start > len(signal) and inv_peak_to_sec_peak_dist_start > len(signal):
+                abs_min = np.argmin(peak_to_peak_signal_start)
+            else:
+                abs_min = 9999999999999
+
+            starts[peak_center] = peak_center - min(peak_to_sec_peak_dist_start, inv_peak_to_sec_peak_dist_start, abs_min)
+
+            # end edge    
+            if len(secondary_peak_centers_end) >= 1:
+                peak_to_sec_peak_dist_end = min(secondary_peak_centers_end)
+            else:
+                peak_to_sec_peak_dist_end = 999999999999999
+
+            if len(inv_secondary_peak_centers_end) >= 1:
+                inv_peak_to_sec_peak_dist_end = min(inv_secondary_peak_centers_end)
+            else:
+                inv_peak_to_sec_peak_dist_end = 999999999999999
+                
+            if peak_to_sec_peak_dist_end > len(signal) and inv_peak_to_sec_peak_dist_end > len(signal):
+                abs_min = np.argmin(peak_to_peak_signal_end)
+            else:
+                abs_min = 9999999999999
+
+            ends[peak_center] = peak_center + min(peak_to_sec_peak_dist_end, inv_peak_to_sec_peak_dist_end, abs_min)
+
+        else:   # last band
+
+            peak_to_peak_signal_start = [signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])]
+            secondary_peak_centers_start, secondary_peak_properties_start = sig.find_peaks(peak_to_peak_signal_start, height = 5)
+            peak_to_end_signal = [signal[pixel] for pixel in range(peak_centers[i], len(signal))]
+            secondary_peak_centers_end, secondary_peak_properties_end = sig.find_peaks(peak_to_end_signal, height = 5)
+            
+            inv_peak_to_peak_signal_start = [255 - signal[pixel] for pixel in range(peak_centers[i-1], peak_centers[i])]
+            inv_secondary_peak_centers_start, inv_secondary_peak_properties_start = sig.find_peaks(inv_peak_to_peak_signal_start, height = 5)
+            inv_peak_to_end_signal = [255 - signal[pixel] for pixel in range(peak_centers[i], len(signal))]
+            inv_secondary_peak_centers_end, inv_secondary_peak_properties_end = sig.find_peaks(inv_peak_to_end_signal, height = 5)
+
+            # start edge
+            if len(secondary_peak_centers_start) >= 1:
+                peak_to_sec_peak_dist_start = len(peak_to_peak_signal_start) - max(secondary_peak_centers_start)
+            else:
+                peak_to_sec_peak_dist_start = 99999999999999
+
+            if len(inv_secondary_peak_centers_start) >= 1:
+                inv_peak_to_sec_peak_dist_start = len(inv_peak_to_peak_signal_start) - max(inv_secondary_peak_centers_start)
+            else:
+                inv_peak_to_sec_peak_dist_start = 99999999999999
+
+            if peak_to_sec_peak_dist_start > len(signal) and inv_peak_to_sec_peak_dist_start > len(signal):
+                abs_min = np.argmin(peak_to_peak_signal_start)
+            else:
+                abs_min = 9999999999999
+
+            starts[peak_center] = peak_center - min(peak_to_sec_peak_dist_start, inv_peak_to_sec_peak_dist_start, abs_min)
+
+            # end edge    
+            if len(secondary_peak_centers_end) >= 1:
+                peak_to_sec_peak_dist_end = min(secondary_peak_centers_end)
+            else:
+                peak_to_sec_peak_dist_end = 999999999999999
+
+            if len(inv_secondary_peak_centers_end) >= 1:
+                inv_peak_to_sec_peak_dist_end = min(inv_secondary_peak_centers_end)
+            else:
+                inv_peak_to_sec_peak_dist_end = 999999999999999
+
+            if peak_to_sec_peak_dist_end > len(signal) and inv_peak_to_sec_peak_dist_end > len(signal):
+                abs_min = np.argmin(peak_to_end_signal)
+            else:
+                abs_min = 999999999
+
+            ends[peak_center] = peak_center + min(peak_to_sec_peak_dist_end, inv_peak_to_sec_peak_dist_end, abs_min)
+
+    return starts, ends
+
+def get_intensities(all_peak_centers, signals, pixel_line, ladder_peak_centers = None):
+    if ladder_peak_centers is not None:
+        starts, ends = get_peak_edges(signals, all_peak_centers, pixel_line, 10, ladder_peak_centers)
+    else:
+        starts, ends = get_peak_edges(signals, all_peak_centers, pixel_line, 10)
+    
+    intensities = {}
+    for peak_center in starts.keys():
+        signal = signals[pixel_line]
+        intensity = sum(int(signal[pixel]) for pixel in range(starts[peak_center], ends[peak_center]))
+        intensities[peak_center] = int(intensity)
+    
+    specifs = {
+        "starts": starts,
+        "ends": ends
+    }
+
+    return intensities, specifs
+
+def mk_weight_fnc(ladder_specifs, all_peak_centers, signals, weights, plot_output):
+
+    ladder_center_signal = signals[int(ladder_specifs["center"])]
+    distances, properties = sig.find_peaks(ladder_center_signal, height=5, distance = 5, prominence=5)
+
+
+    if len(distances) > 3:  # doubled - mk fnc()
+    # Get heights of detected peaks # doubled - mk fnc()
+        peak_heights = properties['peak_heights']   # doubled - mk fnc()
+        top_indices = np.argsort(peak_heights)[-3:] # doubled - mk fnc()
+    # doubled - mk fnc()
+        # Select the highest 3 peaks    # doubled - mk fnc()
+        top_peak_distances = sorted(distances[top_indices]) # doubled - mk fnc()
+    elif len(distances) == 3:   # doubled - mk fnc()
+        top_peak_distances = sorted(distances)  # If less than 3 peaks, take whatever is found  # doubled - mk fnc()
+    else:   # doubled - mk fnc()
+        raise ValueError("Couldn't find 3 main ladder bands")   # doubled - mk fnc()
+
+    intensities, specifs = get_intensities(all_peak_centers, signals, int(ladder_specifs["center"]), top_peak_distances)
+    
+    areas = [intensities[top_peak_distances[0]], intensities[top_peak_distances[1]], intensities[top_peak_distances[2]]]
+
+    a, b = np.polyfit(areas, weights, 1)
+
+    x_line = np.linspace(areas[0], areas[2])
+    y_line = a * x_line + b
+
+    '''
+    plt.plot(x_line, y_line, color="red")
+    plt.scatter(areas, weights)
+    plt.xlabel("area under peak")
+    plt.ylabel("weight [ng]")
+    plt.title("area under peak - weight\nstandard curve")
+    plt.show()
+    '''
+    return a, b
+
+def get_sample_weight(all_peak_centers, signals, pixel_line, a, b):
+    intensities, specifs = get_intensities(all_peak_centers, signals, pixel_line)
+    weights = {}
+    for peak_center in intensities.keys():
+        weight_estimation = a * intensities[peak_center] + b
+        if weight_estimation < 1:
+            weight = "< 1"
+        else:
+            weight = weight_estimation
+        weights[peak_center] = weight
+    return weights, specifs
+
+def get_band_weights(preprocessed_img, ladder2=False):
+    grayscale_img = (preprocessed_img * 255).astype(np.uint8) if np.issubdtype(preprocessed_img.dtype, np.floating) else preprocessed_img.copy()
+    img_height, img_width = grayscale_img.shape
+    # získanie signálov
+    signals = get_signals_list(grayscale_img, img_width)
+
+    # pozície peakov
+    all_peak_centers = {}
+    for index, signal in enumerate(signals):
+        all_peak_centers[index] = get_peak_centers(signals, index, 5, 20)
+
+    # nájdenie ladderu a lane
+    all_lane_specifs, ladder_specifs = get_lane_and_ladder_specifs(width_threshold=25, min_ladder_bands=3, all_peak_centers=all_peak_centers)
+
+    # get variables of the area->weight function and create the stand. curve
+    a, b = mk_weight_fnc(ladder_specifs, all_peak_centers, signals, [45, 95, 97], "output")
+
+    # odstránenie druhého ladderu ak ladder2=True
+    if ladder2 and len(all_lane_specifs) > 0:
+            all_lane_specifs.popitem()
+
+    # priprava pre text
+    text_size = cv2.getTextSize("-----", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
+    color_img = cv2.cvtColor(grayscale_img, cv2.COLOR_GRAY2RGB)
+
+    results_text = ""
+
+    for lane in all_lane_specifs:
+        pixel_line = int(all_lane_specifs[lane]["center"])
+
+        sample_weights, specifs = get_sample_weight(all_peak_centers, signals, pixel_line, a, b)
+
+        results_text += f"lane {lane}:\n"
+        for i, peak_center in enumerate(sample_weights.keys()):
+            sample_weight = sample_weights[peak_center]
+            results_text += f"{sample_weight} ng\n"
+            start = specifs["starts"][peak_center]
+            end = specifs["ends"][peak_center]
+
+            # pridanie textu na obrázok
+            lane_center = int(all_lane_specifs[lane]["center"])
+            centered_x_position = lane_center - text_size[0] // 2
+            y_position = int(peak_center)
+
+            if isinstance(sample_weight, (int, float)):
+                weight_to_print = round(sample_weight, 1)
+            else:
+                weight_to_print = sample_weight
+
+            cv2.putText(color_img, f"{weight_to_print} ng", (centered_x_position, 15 + 15*i),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
+            cv2.line(color_img, (lane_center, start), (lane_center, end), (255, 0, 0), 2)
+            cv2.putText(color_img, "_", (lane_center, start),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
+            cv2.putText(color_img, "_", (lane_center, end),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
+
+        results_text += "--------------\n"
+
+    return color_img, results_text
+
+def get_sample_concentrations(preprocessed_img, threshold, volume, ladder2):
+    grayscale_img = (preprocessed_img * 255).astype(np.uint8) if np.issubdtype(preprocessed_img.dtype, np.floating) else preprocessed_img.copy()
+    img_height, img_width = grayscale_img.shape
+    # získanie signálov
+    signals = get_signals_list(grayscale_img, img_width)
+
+    # pozície peakov
+    all_peak_centers = {}
+    for index, signal in enumerate(signals):
+        all_peak_centers[index] = get_peak_centers(signals, index, 5, 20)
+
+    # nájdenie ladderu a lane
+    all_lane_specifs, ladder_specifs = get_lane_and_ladder_specifs(width_threshold=25, min_ladder_bands=3, all_peak_centers=all_peak_centers)
+
+    # odstránenie druhého ladderu ak ladder2=True
+    if ladder2 and len(all_lane_specifs) > 0:
+            all_lane_specifs.popitem()
+
+    a, b = mk_weight_fnc(ladder_specifs, all_peak_centers, signals, [45, 95, 97], "output")
+
+    text_size = cv2.getTextSize("--.-", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
+    color_img = cv2.cvtColor(grayscale_img, cv2.COLOR_GRAY2RGB)
+
+    results_text = ""
+
+    
+    cv2.putText(color_img, "concentration [ng/microliter]", (len(signals) // 2 , 15),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 165, 0), 1, cv2.LINE_AA)
+
+    for lane in all_lane_specifs:
+        pixel_line = int(all_lane_specifs[lane]["center"])
+        lane_center = int(all_lane_specifs[lane]["center"])
+        centered_x_position = lane_center - text_size[0] // 2
+        
+        # threshold signal
+        clear_signal = []
+        for value in signals[pixel_line]:
+            if value <= threshold:
+                clear_signal.append(0)
+            else:
+                clear_signal.append(float(value))
+        abs_weight = a * sum(clear_signal) + b
+
+        sample_concentration = abs_weight / volume
+
+        conc_to_print = round(sample_concentration, 1)
+        
+        results_text += f"lane {lane}: \n"
+        results_text += f"{sample_concentration} ng/µl\n--------------\n"
+
+        cv2.putText(color_img, f"{conc_to_print}", (centered_x_position, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 165, 0), 1, cv2.LINE_AA)
+
+    return color_img, results_text
 
 
 # funcitons for report
