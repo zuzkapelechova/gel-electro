@@ -3,7 +3,7 @@ from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 from skimage import io
 import numpy as np
-from utils import GelPreprocessor, compute_sample_sizes
+from utils import GelPreprocessor, compute_sample_sizes, align_img, generate_report
 
 
 def main():
@@ -20,6 +20,14 @@ def main():
     # image storage
     original_img = None
     processed_img = None
+    preprocess_results_text = None
+    band_results_text = None
+    annotated_img = None
+
+    # stores the sample volume (in microliters), entered by user
+    # you can access its value using sample_volume.get()
+    sample_volume = tk.DoubleVar(value=False)
+
 
     # ====== FUNCTIONS ======
 
@@ -37,33 +45,28 @@ def main():
 
     # preprocess image
     def preprocess_image():
-        nonlocal processed_img
+        nonlocal processed_img, preprocess_results_text
         if original_img is None:
             messagebox.showwarning("Warning", "Please upload an image first!")
             return
         
+        # get number of ladders from Radiobutton
+        ladder2_flag = True if ladder_var.get() == 2 else False
+
         processed_img, results = preprocessor.process_image(original_img)
+        preprocess_results_text = results
+
+        if ladder2_flag:
+            aligned = align_img(processed_img)
+            processed_img = aligned
 
         # show processed image
         show_image(processed_img, processed_label)
-
-        # scrollable window with results
-        result_window = tk.Toplevel(root)
-        result_window.title("Preprocessing Results")
-
-        text_widget = tk.Text(result_window, wrap=tk.NONE, width=80, height=30)
-        text_widget.insert(tk.END, results)
-        text_widget.config(state=tk.DISABLED)
-        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        scrollbar = tk.Scrollbar(result_window, command=text_widget.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        text_widget.config(yscrollcommand=scrollbar.set)
-
         messagebox.showinfo("Done", "Image has been processed!")
 
     # analyze band sizes
     def analyze_size():
+        nonlocal annotated_img, band_results_text
         if processed_img is None:
             messagebox.showwarning("Warning", "Please preprocess the image first!")
             return
@@ -73,22 +76,12 @@ def main():
 
         # call function from utils
         annotated, results = compute_sample_sizes(processed_img, ladder2=ladder2_flag)
+        annotated_img = annotated
+        band_results_text = results
 
         # show results on the image
         show_image(annotated, processed_label)
-
-        # scrollable window with results
-        result_window = tk.Toplevel(root)
-        result_window.title("Analysis Results")
-
-        text_widget = tk.Text(result_window, wrap=tk.NONE, width=80, height=30)
-        text_widget.insert(tk.END, results)
-        text_widget.config(state=tk.DISABLED)
-        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        scrollbar = tk.Scrollbar(result_window, command=text_widget.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        text_widget.config(yscrollcommand=scrollbar.set)
+        messagebox.showinfo("Done", "Image has been analysed!")
 
     # placeholder – concentration analysis
     def compute_concentration():
@@ -99,13 +92,50 @@ def main():
             "Concentration Analysis",
             "This function is not implemented yet."
         )
-
-    # placeholder – export report
-    def export_report():
+    # placeholder – band weight estimation
+    def estimate_band_weights():
+        """ note FOR THE PERSON WHO WILL IMPLEMENT THIS:
+        - Use sample_volume.get() to obtain the volume entered by user.
+        - The function should produce:
+            1. Annotated image with detected band weights
+            2. Text report (similar to compute_sample_sizes)
+        """
+        
+        if processed_img is None:
+            messagebox.showwarning("Warning", "Please preprocess the image first!")
+            return
         messagebox.showinfo(
-            "Export",
+            "Band Weight Estimation",
             "This function is not implemented yet."
         )
+
+    # export report
+    def export_report():
+        if original_img is None:
+            messagebox.showwarning("Warning", "Please upload an image first!")
+            return
+
+        if processed_img is None:
+            messagebox.showwarning("Warning", "Please preprocess the image first!")
+            return
+
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".html",
+            filetypes=[("HTML Report", "*.html")]
+        )
+        if not file_path:
+            return
+
+        generate_report(
+            output_html_path=file_path,
+            original_img=original_img,
+            preprocess_params=preprocess_results_text,
+            preprocessed_img=processed_img,
+            annotated_img=annotated_img,
+            band_results=band_results_text
+        )
+
+        messagebox.showinfo("Success", "Report exported successfully!")
 
     # display image while keeping aspect ratio
     def show_image(img, label_widget, max_width=600, max_height=600):
@@ -131,6 +161,29 @@ def main():
                      font=("Arial", 20, "bold"))
     title.pack(pady=30)
 
+    # ---- INFO BUTTON (top-right) ----
+    def show_info():
+        messagebox.showinfo(
+            "About / Help",
+            "How to use the Gel Analysis Tool:\n\n"
+            "1. Upload an image of a gel (.jpg, .png, .tif).\n"
+            "2. Click 'Preprocess Image' to prepare it for analysis.\n"
+            "3. After preprocessing, use 'Analyze Size' to detect band sizes.\n"
+            "4. Optionally compute concentration (coming soon).\n"
+            "5. Export report to HTML file.\n\n"
+            "Conditions:\n"
+            "1. Ladder Position: The ladder must be the first lane from the left.\n"
+            "2. Horizontal Alignment: The image must be as horizontally aligned as possible.\n"
+            "3. Dual Ladder Option: If both ladders are positioned on opposite sides, enable the '2 ladders' option for automatic alignment.\n"
+            "4. Crop Image Correctly: The top edge of the image should be cropped precisely at the sample wells, where the lanes begin.\n"
+            "5. Single Gel Limitation: The image should contain a maximum of one gel.\n\n"
+        )
+
+    info_button = tk.Button(root, text="i", font=("Arial", 16, "bold"),
+                            command=show_info)
+    info_button.place(relx=0.95, rely=0.05, anchor="ne")
+
+
     # buttons frame
     button_frame = tk.Frame(root)
     button_frame.pack(pady=5)
@@ -141,23 +194,34 @@ def main():
     preprocess_btn = tk.Button(button_frame, text="⚙️ Preprocess Image", command=preprocess_image, width=20)
     preprocess_btn.grid(row=0, column=1, padx=10, pady=5)
 
-    analyze_btn = tk.Button(button_frame, text="📏 Analyze Size", command=analyze_size, width=20)
+    analyze_btn = tk.Button(button_frame, text="📏 Analyse Size", command=analyze_size, width=20)
     analyze_btn.grid(row=1, column=0, padx=10, pady=5)
 
     conc_btn = tk.Button(button_frame, text="💧 Compute Concentration", command=compute_concentration, width=20)
     conc_btn.grid(row=1, column=1, padx=10, pady=5)
 
+    weight_btn = tk.Button(button_frame, text="Estimate Band Weights", command=estimate_band_weights, width=20)
+    weight_btn.grid(row=2, column=0, padx=10, pady=5)
+
     export_btn = tk.Button(button_frame, text="📄 Export Report", command=export_report, width=20)
-    export_btn.grid(row=2, column=0, padx=10, pady=5)
+    export_btn.grid(row=3, column=0, columnspan=2, padx=10, pady=5)
 
     # ladder count selection
     ladder_var = tk.IntVar(value=1)
     ladder_frame = tk.Frame(button_frame)
-    ladder_frame.grid(row=3, column=0, columnspan=2, pady=10)
+    ladder_frame.grid(row=4, column=0, columnspan=2, pady=10)
 
     tk.Label(ladder_frame, text="Ladders:").pack(side=tk.LEFT, padx=5)
     tk.Radiobutton(ladder_frame, text="1 Ladder", variable=ladder_var, value=1).pack(side=tk.LEFT)
     tk.Radiobutton(ladder_frame, text="2 Ladders", variable=ladder_var, value=2).pack(side=tk.LEFT)
+
+    # input field to enter sample volume in microliters
+    volume_frame = tk.Frame(button_frame)
+    volume_frame.grid(row=2, column=1, pady=10)
+
+    tk.Label(volume_frame, text="Sample volume (µL):").pack(side=tk.LEFT, padx=5)
+    volume_entry = tk.Entry(volume_frame, textvariable=sample_volume, width=8)
+    volume_entry.pack(side=tk.LEFT)
 
     # image display frame
     image_frame = tk.Frame(root)
