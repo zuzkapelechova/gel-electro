@@ -75,29 +75,27 @@ class GelPreprocessor:
 
 def save_image(img, output):
     plt.figure()
-    plt.imshow(img, cmap='gray')
+    plt.imshow(img, cmap = 'gray')
     plt.axis('off')
-    # plt.show()
+    #plt.show()
     plt.savefig(output, dpi=300, bbox_inches='tight')
-
 
 def get_signals_list(img, img_width):
     # returns list of signals (per pixel line)
     signals = []
 
     for pixel_line in range(img_width):
-        signal_line = img[:, pixel_line]
+        signal_line = img[:,pixel_line]
         signals.append(signal_line)
+        
     return signals
-
 
 def plot_signal_in_pixel_line(signals, pixel_line):
     plt.figure()
     plt.plot(signals[pixel_line])
     plt.title(pixel_line)
-    plt.show(block=False)
+    plt.show(block = False)
     plt.ylim(top=255)
-
 
 def get_peak_centers(signals, pixel_line, width_threshold, intensity_threshold):
     signal = signals[pixel_line]
@@ -106,8 +104,8 @@ def get_peak_centers(signals, pixel_line, width_threshold, intensity_threshold):
 
     for peak in peaks:
         peak_centers.append(peak)
+    
     return peak_centers
-
 
 def get_lane_and_ladder_specifs(width_threshold, min_ladder_bands, all_peak_centers):
     all_lane_specifs = {}
@@ -122,8 +120,9 @@ def get_lane_and_ladder_specifs(width_threshold, min_ladder_bands, all_peak_cent
             lane_specifs = {}
             start = pixel_line
             width = 1
+                  
         elif num_of_peaks > 0 and start:
-            width += 1
+            width += 1 
 
         elif num_of_peaks == 0 and (start or pixel_line == len(all_lane_specifs)-1):
             if width > width_threshold:
@@ -138,18 +137,17 @@ def get_lane_and_ladder_specifs(width_threshold, min_ladder_bands, all_peak_cent
 
             width = 0
             start = False
-    return all_lane_specifs, ladder_specifs
 
+    return all_lane_specifs, ladder_specifs
 
 def get_bend_distances_of_lane(signals, all_lane_specifs, lane):
     center_pixel_line = int(all_lane_specifs[lane]["center"])
     center_bend_distances = np.array(signals[center_pixel_line])
     return center_bend_distances
 
-
 def get_sample_size_function_variables(signals, ladder_specifs, sizes):
     ladder_center_signal = signals[int(ladder_specifs["center"])]
-    distances, properties = sig.find_peaks(ladder_center_signal, height=5, distance=5, prominence=5)
+    distances, properties = sig.find_peaks(ladder_center_signal, height=5, distance = 5, prominence=5)
 
     if len(distances) > 3:
         # Get heights of detected peaks
@@ -163,14 +161,15 @@ def get_sample_size_function_variables(signals, ladder_specifs, sizes):
     else:
         raise ValueError("Couldn't find 3 main ladder bends")
 
+
     log_sizes = np.log10(sizes)
 
     slope, intercept = np.polyfit(top_peak_distances, log_sizes, 1)
 
     return slope, intercept, top_peak_distances
 
-
 def save_sample_size_function_plot(slope, intercept, top_peak_distances, sizes, output):
+    
     x = np.linspace(min(top_peak_distances), max(top_peak_distances), 100)
 
     # Compute corresponding y-values using the linear function
@@ -183,9 +182,8 @@ def save_sample_size_function_plot(slope, intercept, top_peak_distances, sizes, 
     plt.xlabel('Distance [px]')
     plt.ylabel('log10(size)')
     plt.title('SIZE - DISTANCE')
-    # plt.show()
+    #plt.show()
     plt.savefig(output)
-
 
 def estimate_sample_size(slope, intercept, distance):
     predicted_size = 10**(slope * distance + intercept)
@@ -194,55 +192,63 @@ def estimate_sample_size(slope, intercept, distance):
 
 def compute_sample_sizes(preprocessed_img, ladder2=False):
     grayscale_img = (preprocessed_img * 255).astype(np.uint8) if np.issubdtype(preprocessed_img.dtype, np.floating) else preprocessed_img.copy()
+    
     img_height, img_width = grayscale_img.shape
-    # získanie signálov
+
+    # read the img into signals dictionary
     signals = get_signals_list(grayscale_img, img_width)
 
-    # pozície peakov
+    # get positions of signal peaks per pixel line
     all_peak_centers = {}
     for index, signal in enumerate(signals):
         all_peak_centers[index] = get_peak_centers(signals, index, 5, 20)
 
-    # nájdenie ladderu a lane
-    all_lane_specifs, ladder_specifs = get_lane_and_ladder_specifs(width_threshold=25, min_ladder_bands=3, all_peak_centers=all_peak_centers)
+    # find ladder and lanes and save the specifications (start, center, end of each lane)
+    all_lane_specifs, ladder_specifs = get_lane_and_ladder_specifs(width_threshold = 25, min_ladder_bands = 3, all_peak_centers = all_peak_centers)
 
-    # premenné pre výpočet size
+    if ladder2:
+        all_lane_specifs.popitem()
+
+    # get variables of the distance->size function
     slope, intercept, main_ladder_band_dist = get_sample_size_function_variables(signals, ladder_specifs, [1517, 1000, 517])
+    
 
-    # odstránenie druhého ladderu ak ladder2=False
-    if not ladder2:
-        if len(all_lane_specifs) > 0:
-            # predpokladáme, že prvý lane je ladder, odstránime ho zo vzoriek
-            all_lane_specifs.pop(0)
-    else:
-        # ak sú 2 laddre, necháme všetky lane, ale ignorujeme posledný lane, ktorý je druhý ladder
-        # predpokladáme, že posledný lane je druhý ladder
-        if len(all_lane_specifs) > 0:
-            all_lane_specifs.popitem()
+    color_img = cv2.cvtColor(grayscale_img, cv2.COLOR_GRAY2RGB)
 
-    # priprava pre text
+    # variable for cv2.putText()
     text_size = cv2.getTextSize("-----", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
+    
     results_text = ""
 
+    # estimate the size of each sample
     for lane in all_lane_specifs:
         sample_distances = all_peak_centers[int(all_lane_specifs[lane]["center"])]
         sample_sizes = []
 
-        results_text += f"lane {lane}:\n"
+        results_text += f"lane {lane}: \n"
         for i, sample_distance in enumerate(sample_distances):
             sample_size = estimate_sample_size(slope, intercept, sample_distance)
             sample_sizes.append(sample_size)
-            results_text += f"{int(sample_size)} bp\n"
 
-            # pridanie textu na obrázok
+            results_text += f"{str(sample_size)}bp\n"
+
+            # add image annotations
             centered_x_position = int(all_lane_specifs[lane]["center"]) - text_size[0] // 2
-            cv2.putText(grayscale_img, f"{int(sample_size)} bp", (centered_x_position, 15 + 15*i),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.putText(grayscale_img, "-----", (centered_x_position, sample_distance),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
+            y_position = int(sample_distance)
+            cv2.putText(color_img, f"{int(sample_size)}bp", (centered_x_position, 15 + 15*i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
+            cv2.putText(color_img, "-----", (centered_x_position, sample_distance), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
 
         results_text += "--------------\n"
 
+    centered_x_ladder_position = int(ladder_specifs["center"] - text_size[0] // 2)
+    sizes = [1517, 1000, 517]
+    for i, y_band_position in enumerate(main_ladder_band_dist):
+        cv2.putText(color_img, f"{sizes[i]}bp", (centered_x_ladder_position, 15 + 15*i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
+        cv2.putText(color_img, "-----", (centered_x_ladder_position, y_band_position), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
+
+
+
+    return color_img, results_text
     return grayscale_img, results_text
 
 def align_img(preprocessed_img):
