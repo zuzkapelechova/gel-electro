@@ -23,6 +23,12 @@ def main():
     preprocess_results_text = None
     band_results_text = None
     annotated_img = None
+    annotated_size_img = None
+    size_results_text = None
+    annotated_conc_img = None
+    conc_results_text = None
+    annotated_weight_img = None
+    weight_results_text = None
 
     # stores the sample volume (in microliters), entered by user
     # you can access its value using sample_volume.get()
@@ -66,7 +72,7 @@ def main():
 
     # analyze band sizes
     def analyze_size():
-        nonlocal annotated_img, band_results_text
+        nonlocal annotated_size_img, size_results_text
         if processed_img is None:
             messagebox.showwarning("Warning", "Please preprocess the image first!")
             return
@@ -75,33 +81,41 @@ def main():
         ladder2_flag = True if ladder_var.get() == 2 else False
 
         # call function from utils
-        annotated, results = compute_sample_sizes(processed_img, ladder2=ladder2_flag)
-        annotated_img = annotated
-        band_results_text = results
+        annotated_size_img, size_results_text = compute_sample_sizes(processed_img, ladder2=ladder2_flag)
 
         # show results on the image
-        show_image(annotated, processed_label)
+        show_image(annotated_size_img, processed_label)
         messagebox.showinfo("Done", "Image has been analysed!")
 
-    # placeholder – concentration analysis
+    # concentration analysis
     def compute_concentration():
+        nonlocal annotated_conc_img, conc_results_text
+
         if processed_img is None:
             messagebox.showwarning("Warning", "Please preprocess the image first!")
+            return
+
+        vol = sample_volume.get()
+        if vol == 0:
+            messagebox.showerror(
+                "Input Error",
+                "Please enter sample volume before running concentration analysis."
+            )
             return
 
         # get number of ladders from Radiobutton
         ladder2_flag = True if ladder_var.get() == 2 else False
 
         # call function from utils
-        annotated, results = get_sample_concentrations(processed_img, 10, volume=sample_volume.get(), ladder2=ladder2_flag)
-        annotated_img = annotated
-        band_results_text = results
+        annotated_conc_img, conc_results_text = get_sample_concentrations(processed_img, 10, volume=sample_volume.get(), ladder2=ladder2_flag)
 
         # show results on the image
-        show_image(annotated, processed_label)
+        show_image(annotated_conc_img, processed_label)
         messagebox.showinfo("Done", "Image has been analysed!")
-    # placeholder – band weight estimation
+
+    # band weight estimation
     def estimate_band_weights():
+        nonlocal annotated_weight_img, weight_results_text
 
         if processed_img is None:
             messagebox.showwarning("Warning", "Please preprocess the image first!")
@@ -111,12 +125,10 @@ def main():
         ladder2_flag = True if ladder_var.get() == 2 else False
 
         # call function from utils
-        annotated, results = get_band_weights(processed_img, ladder2=ladder2_flag)
-        annotated_img = annotated
-        band_results_text = results
+        annotated_weight_img, weight_results_text = get_band_weights(processed_img, ladder2=ladder2_flag)
 
         # show results on the image
-        show_image(annotated, processed_label)
+        show_image(annotated_weight_img, processed_label)
         messagebox.showinfo("Done", "Image has been analysed!")
 
     # export report
@@ -138,11 +150,16 @@ def main():
 
         generate_report(
             output_html_path=file_path,
-            original_img=original_img,
             preprocess_params=preprocess_results_text,
+            original_img=original_img,
             preprocessed_img=processed_img,
-            annotated_img=annotated_img,
-            band_results=band_results_text
+            annotated_size_img=annotated_size_img,
+            size_results_text=size_results_text,
+            annotated_conc_img=annotated_conc_img,
+            conc_results_text=conc_results_text,
+            annotated_weight_img=annotated_weight_img,
+            weight_results_text=weight_results_text,
+            sample_volume=sample_volume.get()
         )
 
         messagebox.showinfo("Success", "Report exported successfully!")
@@ -171,22 +188,24 @@ def main():
                      font=("Arial", 20, "bold"))
     title.pack(pady=30)
 
-    # ---- INFO BUTTON (top-right) ----
+    # info button
     def show_info():
         messagebox.showinfo(
             "About / Help",
-            "How to use the Gel Analysis Tool:\n\n"
+            "HOW TO USE THE GEL ANALYSIS TOOL:\n\n"
             "1. Upload an image of a gel (.jpg, .png, .tif).\n"
             "2. Click 'Preprocess Image' to prepare it for analysis.\n"
-            "3. After preprocessing, use 'Analyze Size' to detect band sizes.\n"
-            "4. Optionally compute concentration (coming soon).\n"
-            "5. Export report to HTML file.\n\n"
-            "Conditions:\n"
-            "1. Ladder Position: The ladder must be the first lane from the left.\n"
-            "2. Horizontal Alignment: The image must be as horizontally aligned as possible.\n"
-            "3. Dual Ladder Option: If both ladders are positioned on opposite sides, enable the '2 ladders' option for automatic alignment.\n"
-            "4. Crop Image Correctly: The top edge of the image should be cropped precisely at the sample wells, where the lanes begin.\n"
-            "5. Single Gel Limitation: The image should contain a maximum of one gel.\n\n"
+            "3. Use 'Analyze Size' to detect DNA band sizes.\n"
+            "4. To compute sample concentration, enter the sample volume (in µL) and click 'Compute Concentration'.\n"
+            "5. To estimate band weights, click 'Estimate Band Weights'.\n"
+            "6. Export the full analysis as an HTML report.\n\n"
+
+            "CONDITIONS FOR CORRECT PROCESSING:\n\n"
+            "1. Ladder must be the FIRST lane on the left (or choose '2 ladders' if ladders are on both sides).\n"
+            "2. The gel image should be as horizontally aligned as possible.\n"
+            "3. Crop the top of the gel exactly at the wells (start of the lanes).\n"
+            "4. Only ONE gel should be present in the uploaded image.\n"
+            "5. For concentration analysis, you must enter a non-zero sample volume.\n\n"
         )
 
     info_button = tk.Button(root, text="i", font=("Arial", 16, "bold"),

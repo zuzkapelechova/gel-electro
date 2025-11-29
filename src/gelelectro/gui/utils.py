@@ -693,11 +693,16 @@ def img_to_base64(img):
     return base64.b64encode(buf.read()).decode("utf-8")
 
 def generate_report(output_html_path,
-                    preprocess_params,
                     original_img=None,
+                    preprocess_params=None,
                     preprocessed_img=None,
-                    annotated_img=None,
-                    band_results=None):
+                    annotated_size_img=None,
+                    size_results_text=None,
+                    annotated_conc_img=None,
+                    conc_results_text=None,
+                    annotated_weight_img=None,
+                    weight_results_text=None,
+                    sample_volume=None):
     """
     Generates HTML report using data already computed in the GUI.
     Does NOT run any preprocessing or analysis.
@@ -705,7 +710,9 @@ def generate_report(output_html_path,
 
     original_b64 = img_to_base64(original_img) if original_img is not None else None
     preprocessed_b64 = img_to_base64(preprocessed_img) if preprocessed_img is not None else None
-    annotated_b64 = img_to_base64(annotated_img) if annotated_img is not None else None
+    annotated_size_b64 = img_to_base64(annotated_size_img) if annotated_size_img is not None else None
+    annotated_conc_b64 = img_to_base64(annotated_conc_img) if annotated_conc_img is not None else None
+    annotated_weight_b64 = img_to_base64(annotated_weight_img) if annotated_weight_img is not None else None
 
     html_template = """
     <!DOCTYPE html>
@@ -751,17 +758,44 @@ def generate_report(output_html_path,
         {% endif %}
 
 
-        {% if annotated_b64 %}
-        <h2>3. Annotated Image - size</h2>
-        <div class="img-box">
-            <img src="data:image/png;base64,{{ annotated_b64 }}">
+        {% if annotated_size_b64 %}
+        <h2>3.  Annotated Image - Size</h2>
+        <div style="text-align: center;">
+            <img src="data:image/png;base64,{{ annotated_size_b64 }}" style="max-width: 500px;">
         </div>
         {% endif %}
 
-        {% if band_results %}
+        {% if size_results %}
         <h2>4. Size Analysis</h2>
-        <pre>{{ band_results }}</pre>
+        <pre>{{ size_results }}</pre>
         {% endif %}
+
+        {% if annotated_conc_b64 %}
+        <h2>5. Annotated Image - Concentration</h2>
+        <p><b>Used sample volume:</b> {{ sample_volume }} µL</p>
+        <div style="text-align: center;">
+            <img src="data:image/png;base64,{{ annotated_conc_b64 }}" style="max-width: 500px;">
+        </div>
+        {% endif %}
+
+        {% if conc_results %}
+        <h2>6. Concentration Analysis</h2>
+        <pre>{{ conc_results }}</pre>
+        {% endif %}
+
+        {% if annotated_weight_b64 %}
+        <h2>7. Annotated Image - Band Weights</h2>
+        <p><b>Used sample volume:</b> {{ sample_volume }} µL</p>
+        <div style="text-align: center;">
+            <img src="data:image/png;base64,{{ annotated_weight_b64 }}" style="max-width: 500px;">
+        </div>
+        {% endif %}
+
+        {% if weight_results %}
+        <h2>8. Weight Estimation</h2>
+        <pre>{{ weight_results }}</pre>
+        {% endif %}
+
 
     </body>
     </html>
@@ -773,8 +807,13 @@ def generate_report(output_html_path,
         preprocess_params=preprocess_params,
         original_b64=original_b64,
         preprocessed_b64=preprocessed_b64,
-        annotated_b64=annotated_b64,
-        band_results=band_results
+        annotated_size_b64=annotated_size_b64,
+        size_results=size_results_text,
+        annotated_conc_b64=annotated_conc_b64,
+        conc_results=conc_results_text,
+        annotated_weight_b64=annotated_weight_b64,
+        weight_results=weight_results_text,
+        sample_volume=sample_volume
     )
 
     with open(output_html_path, "w", encoding="utf-8") as f:
