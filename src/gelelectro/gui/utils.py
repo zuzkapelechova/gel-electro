@@ -235,7 +235,7 @@ def compute_sample_sizes(preprocessed_img, ladder2=False):
             # add image annotations
             centered_x_position = int(all_lane_specifs[lane]["center"]) - text_size[0] // 2
             y_position = int(sample_distance)
-            cv2.putText(color_img, f"{int(sample_size)} bp", (centered_x_position, 15 + 15*i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
+            cv2.putText(color_img, f"{int(sample_size)}bp", (centered_x_position, 15 + 15*i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
             cv2.putText(color_img, "-----", (centered_x_position, sample_distance), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 3, cv2.LINE_AA)
 
         results_text += "--------------\n"
@@ -243,7 +243,7 @@ def compute_sample_sizes(preprocessed_img, ladder2=False):
     centered_x_ladder_position = int(ladder_specifs["center"] - text_size[0] // 2)
     sizes = [1517, 1000, 517]
     for i, y_band_position in enumerate(main_ladder_band_dist):
-        cv2.putText(color_img, f"{sizes[i]} bp", (centered_x_ladder_position, 15 + 15*i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
+        cv2.putText(color_img, f"{sizes[i]}bp", (centered_x_ladder_position, 15 + 15*i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
         cv2.putText(color_img, "-----", (centered_x_ladder_position, y_band_position), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 2, cv2.LINE_AA)
 
 
@@ -537,7 +537,7 @@ def mk_weight_fnc(ladder_specifs, all_peak_centers, signals, weights, plot_outpu
     
     areas = [intensities[top_peak_distances[0]], intensities[top_peak_distances[1]], intensities[top_peak_distances[2]]]
 
-    a, b = np.polyfit(areas, np.exp(np.array(weights))-1, 1)
+    a, b = np.polyfit(areas, weights, 1)
 
     x_line = np.linspace(min(areas), max(areas))
     y_line = a * x_line + b
@@ -556,7 +556,7 @@ def get_sample_weight(all_peak_centers, signals, pixel_line, a, b):
     intensities, specifs = get_intensities(all_peak_centers, signals, pixel_line)
     weights = {}
     for peak_center in intensities.keys():
-        weight_estimation = np.log1p(a * intensities[peak_center] + b)
+        weight_estimation = a * intensities[peak_center] + b
         if weight_estimation < 1:
             weight = "< 1"
         else:
@@ -699,7 +699,7 @@ def get_sample_concentrations(preprocessed_img, threshold, volume, ladder2):
                 clear_signal.append(0)
             else:
                 clear_signal.append(float(value))
-        abs_weight = np.log1p(a * sum(clear_signal) + b)
+        abs_weight = a * sum(clear_signal) + b
 
         sample_concentration = abs_weight / volume
 
