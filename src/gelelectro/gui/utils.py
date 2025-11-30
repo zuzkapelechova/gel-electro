@@ -762,11 +762,8 @@ def generate_report(output_html_path,
 
         <h1>Gel Electrophoresis Report</h1>
 
-        <h2>1. Preprocessing Parameters</h2>
-        <pre>{{ preprocess_params }}</pre>
-
         {% if original_b64 or preprocessed_b64 %}
-        <h2>2. Original vs Preprocessed</h2>
+        <h2>Original vs Preprocessed</h2>
 
         <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 30px;">
             
@@ -787,21 +784,20 @@ def generate_report(output_html_path,
         </div>
         {% endif %}
 
-
         {% if annotated_size_b64 %}
-        <h2>3.  Annotated Image - Size</h2>
+        <h2>Annotated Image - Size</h2>
         <div style="text-align: center;">
             <img src="data:image/png;base64,{{ annotated_size_b64 }}" style="max-width: 500px;">
         </div>
         {% endif %}
 
         {% if size_results %}
-        <h2>4. Size Analysis</h2>
+        <h2>Size Analysis</h2>
         <pre>{{ size_results }}</pre>
         {% endif %}
 
         {% if annotated_conc_b64 %}
-        <h2>5. Annotated Image - Concentration</h2>
+        <h2>Annotated Image - Concentration</h2>
         <p><b>Used sample volume:</b> {{ sample_volume }} µL</p>
         <div style="text-align: center;">
             <img src="data:image/png;base64,{{ annotated_conc_b64 }}" style="max-width: 500px;">
@@ -809,27 +805,31 @@ def generate_report(output_html_path,
         {% endif %}
 
         {% if conc_results %}
-        <h2>6. Concentration Analysis</h2>
+        <h2>Concentration Analysis</h2>
         <pre>{{ conc_results }}</pre>
         {% endif %}
 
         {% if annotated_weight_b64 %}
-        <h2>7. Annotated Image - Band Weights</h2>
-        <p><b>Used sample volume:</b> {{ sample_volume }} µL</p>
+        <h2>Annotated Image - Band Weights</h2>
         <div style="text-align: center;">
             <img src="data:image/png;base64,{{ annotated_weight_b64 }}" style="max-width: 500px;">
         </div>
         {% endif %}
 
         {% if weight_results %}
-        <h2>8. Weight Estimation</h2>
+        <h2>Weight Estimation</h2>
         <pre>{{ weight_results }}</pre>
         {% endif %}
 
+        {% if preprocess_params %}
+        <h2>Preprocessing Parameters</h2>
+        <pre>{{ preprocess_params }}</pre>
+        {% endif %}
 
     </body>
     </html>
     """
+
 
     template = Template(html_template)
 
@@ -848,3 +848,31 @@ def generate_report(output_html_path,
 
     with open(output_html_path, "w", encoding="utf-8") as f:
         f.write(html)
+
+def generate_txt_report(output_txt_path,
+                        preprocess_params=None,
+                        size_results_text=None,
+                        conc_results_text=None,
+                        weight_results_text=None,
+                        sample_volume=None):
+    report = ""
+
+    report += "=== PREPROCESSING PARAMETERS ===\n"
+    report += f"{preprocess_params}\n\n" if preprocess_params else "Not performed.\n\n"
+
+    report += "=== SIZE ANALYSIS ===\n"
+    report += f"{size_results_text}\n\n" if size_results_text else "Not performed.\n\n"
+
+    report += "=== CONCENTRATION ANALYSIS ===\n"
+    if conc_results_text:
+        report += f"Sample volume: {sample_volume} µL\n"
+        report += f"{conc_results_text}\n\n"
+    else:
+        report += "Not performed.\n\n"
+
+    report += "=== BAND WEIGHT ESTIMATION ===\n"
+    report += f"{weight_results_text}\n\n" if weight_results_text else "Not performed.\n\n"
+
+    with open(output_txt_path, "w", encoding="utf-8") as f:
+        f.write(report)
+
