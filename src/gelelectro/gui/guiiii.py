@@ -3,7 +3,7 @@ from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 from skimage import io
 import numpy as np
-from utils import GelPreprocessor, compute_sample_sizes, align_img, generate_report, get_sample_concentrations, get_band_weights
+from utils import GelPreprocessor, compute_sample_sizes, align_img, generate_report, generate_txt_report, get_sample_concentrations, get_band_weights
 
 
 def main():
@@ -160,7 +160,16 @@ def main():
             sample_volume=sample_volume.get()
         )
 
-        messagebox.showinfo("Success", "Report exported successfully!")
+        txt_path = file_path.rsplit(".", 1)[0] + ".txt"
+        generate_txt_report(
+            output_txt_path=txt_path,
+            preprocess_params=preprocess_results_text,
+            size_results_text=size_results_text,
+            conc_results_text=conc_results_text,
+            weight_results_text=weight_results_text,
+            sample_volume=sample_volume.get()
+        )
+        messagebox.showinfo("Success", "Reports exported successfully!")
 
     # display image while keeping aspect ratio
     def show_image(img, label_widget, max_width=600, max_height=600):
@@ -196,7 +205,9 @@ def main():
             "3. Use 'Analyze Size' to detect DNA band sizes.\n"
             "4. To compute sample concentration, enter the sample volume (in µL) and click 'Compute Concentration'.\n"
             "5. To estimate band weights, click 'Estimate Band Weights'.\n"
-            "6. Export the full analysis as an HTML report.\n\n"
+            "6. Export the full analysis by clicking 'Export Report'. This will generate:\n"
+            "   - an HTML file containing images and all results\n"
+            "   - a TXT file containing only text-based parameters and analysis results\n\n"
 
             "CONDITIONS FOR CORRECT PROCESSING:\n\n"
             "1. Ladder must be the FIRST lane on the left (or choose '2 ladders' if ladders are on both sides).\n"
