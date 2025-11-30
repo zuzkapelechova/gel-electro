@@ -227,15 +227,15 @@ def compute_sample_sizes(preprocessed_img, ladder2=False):
 
         results_text += f"lane {lane}: \n"
         for i, sample_distance in enumerate(sample_distances):
-            sample_size = estimate_sample_size(slope, intercept, sample_distance)
+            sample_size = int(estimate_sample_size(slope, intercept, sample_distance))
             sample_sizes.append(sample_size)
 
-            results_text += f"{str(sample_size)}bp\n"
+            results_text += f"{str(sample_size)} bp\n"
 
             # add image annotations
             centered_x_position = int(all_lane_specifs[lane]["center"]) - text_size[0] // 2
             y_position = int(sample_distance)
-            cv2.putText(color_img, f"{int(sample_size)}bp", (centered_x_position, 15 + 15*i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
+            cv2.putText(color_img, f"{int(sample_size)} bp", (centered_x_position, 15 + 15*i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
             cv2.putText(color_img, "-----", (centered_x_position, sample_distance), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 3, cv2.LINE_AA)
 
         results_text += "--------------\n"
@@ -243,7 +243,7 @@ def compute_sample_sizes(preprocessed_img, ladder2=False):
     centered_x_ladder_position = int(ladder_specifs["center"] - text_size[0] // 2)
     sizes = [1517, 1000, 517]
     for i, y_band_position in enumerate(main_ladder_band_dist):
-        cv2.putText(color_img, f"{sizes[i]}bp", (centered_x_ladder_position, 15 + 15*i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
+        cv2.putText(color_img, f"{sizes[i]} bp", (centered_x_ladder_position, 15 + 15*i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
         cv2.putText(color_img, "-----", (centered_x_ladder_position, y_band_position), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 2, cv2.LINE_AA)
 
 
@@ -537,14 +537,14 @@ def mk_weight_fnc(ladder_specifs, all_peak_centers, signals, weights, plot_outpu
     
     areas = [intensities[top_peak_distances[0]], intensities[top_peak_distances[1]], intensities[top_peak_distances[2]]]
 
-    a, b = np.polyfit(areas, weights, 1)
+    a, b = np.polyfit(areas, np.exp(np.array(weights))-1, 1)
 
-    x_line = np.linspace(areas[0], areas[2])
+    x_line = np.linspace(min(areas), max(areas))
     y_line = a * x_line + b
 
     '''
     plt.plot(x_line, y_line, color="red")
-    plt.scatter(areas, weights)
+    plt.scatter(areas, np.exp(np.array(weights))-1)
     plt.xlabel("area under peak")
     plt.ylabel("weight [ng]")
     plt.title("area under peak - weight\nstandard curve")
@@ -556,7 +556,7 @@ def get_sample_weight(all_peak_centers, signals, pixel_line, a, b):
     intensities, specifs = get_intensities(all_peak_centers, signals, pixel_line)
     weights = {}
     for peak_center in intensities.keys():
-        weight_estimation = a * intensities[peak_center] + b
+        weight_estimation = np.log1p(a * intensities[peak_center] + b)
         if weight_estimation < 1:
             weight = "< 1"
         else:
@@ -607,6 +607,9 @@ def get_band_weights(preprocessed_img, ladder2=False):
             lane_center = int(all_lane_specifs[lane]["center"])
             centered_x_position = lane_center - text_size[0] // 2
             y_position = int(peak_center)
+
+            if np.isnan(sample_weight):
+                continue
 
             if isinstance(sample_weight, (int, float)):
                 weight_to_print = round(sample_weight, 1)
@@ -696,11 +699,14 @@ def get_sample_concentrations(preprocessed_img, threshold, volume, ladder2):
                 clear_signal.append(0)
             else:
                 clear_signal.append(float(value))
-        abs_weight = a * sum(clear_signal) + b
+        abs_weight = np.log1p(a * sum(clear_signal) + b)
 
         sample_concentration = abs_weight / volume
 
+        if np.isnan(sample_concentration):
+            continue
         conc_to_print = round(sample_concentration, 1)
+ 
         
         results_text += f"lane {lane}: \n"
         results_text += f"{sample_concentration} ng/µl\n--------------\n"

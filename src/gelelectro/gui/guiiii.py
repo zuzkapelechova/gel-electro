@@ -257,7 +257,7 @@ def main():
     volume_frame = tk.Frame(button_frame)
     volume_frame.grid(row=2, column=1, pady=10)
 
-    tk.Label(volume_frame, text="Sample volume (µl):").pack(side=tk.LEFT, padx=5)
+    tk.Label(volume_frame, text="Sample volume (µL):").pack(side=tk.LEFT, padx=5)
     volume_entry = tk.Entry(volume_frame, textvariable=sample_volume, width=8)
     volume_entry.pack(side=tk.LEFT)
 
