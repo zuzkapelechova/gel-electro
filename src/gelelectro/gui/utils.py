@@ -236,7 +236,7 @@ def compute_sample_sizes(preprocessed_img, ladder2=False):
             centered_x_position = int(all_lane_specifs[lane]["center"]) - text_size[0] // 2
             y_position = int(sample_distance)
             cv2.putText(color_img, f"{int(sample_size)}bp", (centered_x_position, 15 + 15*i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
-            cv2.putText(color_img, "-----", (centered_x_position, sample_distance), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
+            cv2.putText(color_img, "-----", (centered_x_position, sample_distance), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 3, cv2.LINE_AA)
 
         results_text += "--------------\n"
 
@@ -244,7 +244,7 @@ def compute_sample_sizes(preprocessed_img, ladder2=False):
     sizes = [1517, 1000, 517]
     for i, y_band_position in enumerate(main_ladder_band_dist):
         cv2.putText(color_img, f"{sizes[i]}bp", (centered_x_ladder_position, 15 + 15*i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
-        cv2.putText(color_img, "-----", (centered_x_ladder_position, y_band_position), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
+        cv2.putText(color_img, "-----", (centered_x_ladder_position, y_band_position), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 2, cv2.LINE_AA)
 
 
 
@@ -622,6 +622,36 @@ def get_band_weights(preprocessed_img, ladder2=False):
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
 
         results_text += "--------------\n"
+
+        weights = [45, 95, 97]
+        centered_x_ladder_position = int(ladder_specifs["center"] - text_size[0] // 2)
+        ladder_center_signal = signals[int(ladder_specifs["center"])]
+        distances, properties = sig.find_peaks(ladder_center_signal, height=5, distance = 5, prominence=5)
+        slope, intercept, main_ladder_band_dist = get_sample_size_function_variables(signals, ladder_specifs, [1517, 1000, 517])
+        if len(distances) > 3:  # doubled - mk fnc()
+        # Get heights of detected peaks # doubled - mk fnc()
+            peak_heights = properties['peak_heights']   # doubled - mk fnc()
+            top_indices = np.argsort(peak_heights)[-3:] # doubled - mk fnc()
+        # doubled - mk fnc()
+        # Select the highest 3 peaks    # doubled - mk fnc()
+            top_peak_distances = sorted(distances[top_indices]) # doubled - mk fnc()
+        elif len(distances) == 3:   # doubled - mk fnc()
+            top_peak_distances = sorted(distances)  # If less than 3 peaks, take whatever is found  # doubled - mk fnc()
+        else:   # doubled - mk fnc()
+            raise ValueError("Couldn't find 3 main ladder bands")   # doubled - mk fnc()
+
+        intensities, specifs = get_intensities(all_peak_centers, signals, int(ladder_specifs["center"]), top_peak_distances)
+
+        for i, y_band_position in enumerate(main_ladder_band_dist):
+            start = specifs["starts"][y_band_position]
+            end  = specifs["ends"][y_band_position]
+
+            cv2.putText(color_img, f"{weights[i]}", (centered_x_ladder_position, 15 + 15*i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
+            cv2.line(color_img, (centered_x_ladder_position, start), (centered_x_ladder_position, end), (255, 0, 0), 2)
+            cv2.putText(color_img, "_", (centered_x_ladder_position, start),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
+            cv2.putText(color_img, "_", (centered_x_ladder_position, end),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
 
     return color_img, results_text
 
