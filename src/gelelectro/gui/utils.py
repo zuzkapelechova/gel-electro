@@ -733,10 +733,6 @@ def generate_report(output_html_path,
                     annotated_weight_img=None,
                     weight_results_text=None,
                     sample_volume=None):
-    """
-    Generates HTML report using data already computed in the GUI.
-    Does NOT run any preprocessing or analysis.
-    """
 
     original_b64 = img_to_base64(original_img) if original_img is not None else None
     preprocessed_b64 = img_to_base64(preprocessed_img) if preprocessed_img is not None else None
